@@ -54,6 +54,8 @@ def main(argv: list[str] | None = None) -> int:
     p_cas = sub.add_parser("cas", help="lossless retrieve (even bad stays)")
     p_cas.add_argument("oid")
 
+    sub.add_parser("mcp", help="stdio MCP server (Grok / Claude / Cursor)")
+
     p_mv = sub.add_parser("harness", help="lab tools: math-verify, lean")
     p_mv.add_argument("tool", choices=["math-verify", "lean"])
     p_mv.add_argument("--gold", default=None)
@@ -62,6 +64,12 @@ def main(argv: list[str] | None = None) -> int:
 
     args = parser.parse_args(argv)
     cmd = args.cmd or "status"
+
+    if cmd == "mcp":
+        from fourdmem.agent.mcp import serve
+
+        serve(_store(args))
+        return 0
 
     if cmd == "harness":
         if args.tool == "math-verify":

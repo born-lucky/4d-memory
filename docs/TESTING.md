@@ -153,12 +153,14 @@ Frozen fixture (creating goal = `prove Hilbert 4D encode/decode is bijective`):
 
 ---
 
-## L5 — Live zone (PR-12)
+## L5 — MCP + live zone
 
 | ID | Test | File | Pass |
 | --- | --- | --- | --- |
-| T5.1 | Frozen prefix | `tests/test_live_zone.py` | Helper refuses to mutate a copied messages list |
-| T5.2 | Tools constant | same | Tool list does not gain/lose names across a store/recall |
+| T5.1 | Frozen prefix | `tests/test_mcp.py` | `assert_prefix_frozen` refuses edits/drops |
+| T5.2 | Tools constant | same | `tools/list` names == `TOOL_NAMES` twice; `listChanged: false` |
+| T5.3 | Work loop over MCP | same | store Hilbert+cats via `dispatch`; recall has Hilbert, not cats; CAS has cats |
+| T5.4 | Math tool | same | `fourdmem_math_verify` gold `1/2` answer `0.5` → `ok: true` |
 
 ---
 
@@ -220,7 +222,9 @@ One command runs T1–T5 that exist. CI (once `.github/workflows/ci.yml` is on G
 pytest -q   →  9 passed
   T1.1–T1.5  green (Math-Verify true/false + Lean env=0)
   T2.1–T2.4  green (kinds, store-time, judge, CAS)
-  T2.5, T3–T6  not implemented yet
+  T2.5         not yet
+  T5.1–T5.4    green (MCP + live-zone)
+  T3–T4, T6    not implemented yet
 ```
 
-Next test to write: **T2.5** (two plans) then **T3.1–T3.3** with Hilbert.
+Next: **T2.5** (two plans) then Hilbert **T3.1–T3.3**.

@@ -145,7 +145,23 @@ pytest -q
 
 Lean is skipped only if `lake` / `vendor/math/lean-repl` is missing. Math-Verify is a required pip dep; those tests must pass.
 
-MCP: tools stay **always registered**. Recall is a tool result. The conversation prefix is never rewritten.
+## MCP (Grok / Claude / Cursor)
+
+Stdio server, same idea as the official Memory MCP and local-first stores (`agent-memory-mcp`, `mcp-memory-service`): always-on tools, recall as a **tool result**, never rewrite the chat prefix. Default recall is **good of the plan**.
+
+```json
+{
+  "mcpServers": {
+    "fourdmem": {
+      "command": "python",
+      "args": ["-m", "fourdmem.agent.mcp"],
+      "env": { "FOURDMEM_STORE": ".fourdmem" }
+    }
+  }
+}
+```
+
+Copy-paste config: [examples/mcp.json](examples/mcp.json). Details: [docs/MCP.md](docs/MCP.md). Or run `fourdmem mcp`.
 
 ---
 

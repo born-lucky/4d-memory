@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "fourdmem": {
+      "command": "python",
+      "args": ["-m", "fourdmem.agent.mcp"],
+      "env": {
+        "FOURDMEM_STORE": ".fourdmem"
+      }
+    }
+  }
+}
