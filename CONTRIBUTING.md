@@ -48,6 +48,8 @@ Read [docs/DESIGN.md](docs/DESIGN.md) and [docs/MATH.md](docs/MATH.md).
 - New spatial axes need a coordinate + Hilbert extension + slice rule, or they do not ship.
 - Do not commit `vendor/` or `.venv/`. See [THIRD_PARTY.md](THIRD_PARTY.md).
 
+The runnable plan is [docs/TESTING.md](docs/TESTING.md). Layers L0–L2 are the current gate.
+
 ## Tests that must stay green
 
 - `tests/test_work_loop.py` — cats are `bad`, Hilbert is `good`, recall unclouded, CAS still has cats, live prompt does not retie.

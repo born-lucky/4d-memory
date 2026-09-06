@@ -124,6 +124,8 @@ fourdmem harness math-verify --gold 1/2 --answer 0.5    # true
 fourdmem harness lean --lean-cmd "def f := 2"           # {"env": 0}
 ```
 
+Full plan (layers, cheats that fail, PR map): **[docs/TESTING.md](docs/TESTING.md)**.
+
 ## How we test the math harness
 
 This is **not** a website. Labs harness math as **local tools** you download and call:
