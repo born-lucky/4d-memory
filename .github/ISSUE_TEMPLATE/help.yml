@@ -1,0 +1,22 @@
+name: I want to help build this
+description: Grab a slice of the PR plan or propose work.
+title: "[help] "
+labels: ["help wanted"]
+body:
+  - type: dropdown
+    id: slice
+    attributes:
+      label: Which slice
+      options:
+        - PR-1 harness wrappers (Lean REPL)
+        - PR-3 Hilbert on L4 + Lean Lattice4
+        - PR-5 palace / Coord4
+        - Tests / docs / Windows CLI
+        - Something else (describe below)
+    validations:
+      required: true
+  - type: textarea
+    id: note
+    attributes:
+      label: Note
+      description: What you want to take, or a question. Binding rules live in docs/DESIGN.md Key Decisions.

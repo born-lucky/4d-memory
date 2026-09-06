@@ -1,0 +1,23 @@
+name: Bug
+description: Something does not work when using or building fourdmem.
+title: "[bug] "
+labels: ["bug"]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you ran, what you expected, what you got.
+    validations:
+      required: true
+  - type: input
+    id: os
+    attributes:
+      label: OS / Python
+      placeholder: "Windows 11, Python 3.12"
+  - type: textarea
+    id: repro
+    attributes:
+      label: Repro
+      description: Commands or a short script.
+      render: shell

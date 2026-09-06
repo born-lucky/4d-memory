@@ -5,7 +5,8 @@ Navigate a mnemonic palace. Recall only what the goal needs. Stop paying context
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![Python 3.12+](https://img.shields.io/badge/python-3.12+-blue.svg)](https://www.python.org)
-[![Status: Draft](https://img.shields.io/badge/status-Draft-orange.svg)](docs/DESIGN.md)
+[![CI](https://github.com/born-lucky/4d-memory/actions/workflows/ci.yml/badge.svg)](https://github.com/born-lucky/4d-memory/actions/workflows/ci.yml)
+[![PRs welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
 
 > Your model does not need a bigger window.  
 > It needs a place to put things, and a way to walk back to them.
@@ -146,8 +147,14 @@ The 3D view exists so the agent has a **place**. Movement is a dict lookup. Path
 
 ---
 
-## Contributing
+## Use it, add to it, help build it
 
-PRs welcome. Read [docs/DESIGN.md](docs/DESIGN.md) before changing the lattice, the 4th axis, or the live-zone rule. Those are binding.
+The repo is **public** and **MIT**. Forks, issues, and pull requests are open.
 
-If you only read one math page, read [docs/MATH.md](docs/MATH.md).
+| You want to | Do this |
+| --- | --- |
+| **Use it** | `git clone` → `pip install -e ".[dev]"` → `fourdmem goal` / `store` / `recall` |
+| **Report a bug** | [Open an issue](https://github.com/born-lucky/4d-memory/issues/new/choose) |
+| **Help build it** | Grab a [`help wanted`](https://github.com/born-lucky/4d-memory/issues?q=is%3Aissue+is%3Aopen+label%3A%22help+wanted%22) issue, or read [CONTRIBUTING.md](CONTRIBUTING.md) and send a PR |
+
+Binding rules (good/bad at store time, prefix never rewritten, Hilbert must keep \(w=+8\)) are in [docs/DESIGN.md](docs/DESIGN.md). Math: [docs/MATH.md](docs/MATH.md).
