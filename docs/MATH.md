@@ -32,7 +32,7 @@ v1 defaults: \(X=16\), \(Y=16\), \(Z=8\), \(W=8\). That is \(16\times 16\times 8
 
 This box is not a power-of-two hypercube on purpose: eight floors is a palace; 256 rooms per floor is walkable; **17 valence levels exist so both poles \(\pm 1.0\) and zero are representable**. Shrinking \(w\) to 16 values would drop \(w=+8\) (`judge good`). Forbidden.
 
-**Valence map:** `good ≡ +1.0`, `bad ≡ -1.0`,
+**Two kinds, not a live-prompt score.** `good ≡ +1.0 ↦ w=+8`. `bad ≡ -1.0 ↦ w=-8`. Kind is decided against **the goal at store time** (the creating plan). Jaccard \(\ge 0.35\) → good, else bad. Bad is kept in the CAS and listed on `plan.bad` with **no edges** into `plan.good`. Default recall walks good only. Switching the live prompt does not retie junk.
 
 \[
 w = \mathrm{clamp}(\mathrm{round}(v\cdot W),-W,W).
@@ -47,9 +47,9 @@ So \(+1.0 \mapsto +8\), which the Hilbert coder in §4 must accept.
 | \(z\) | up | stories | same |
 | \(w\) | **valence** | bad \(\rightarrow\) good | `judge` (default \(0\)) |
 
-**Why valence is the 4th axis, and goal is not.** A spatial axis has to be a stable property of an object. Goals change every prompt. If we put “pertinence to the current goal” on \(w\), the whole palace would re-embed every turn and landmarks would lie. Valence is a judgment attached to the object: nearby on \(w\) means similarly judged. “Recall the good stuff related to this” is a walk toward \(+w\) in the same \((x,y,z)\) neighborhood.
+**Why valence is the 4th axis, and the live prompt is not.** A spatial axis has to be a stable property of an object. The *creating* goal is that property: was this part of the plan when we wrote it? The *live* prompt is not — it changes every turn. Putting live pertinence on \(w\) would re-embed the palace and cloud the plan with whatever the agent is staring at now.
 
-Goal pertinence is a **query-time gate** (section 6). The two compose. They are not the same coordinate.
+Default recall is the plan's good list. Bad stays, untied. They are not the same coordinate as “what am I doing this second.”
 
 Distance on the lattice is Chebyshev (not Manhattan: a diagonal neighbor is one look in a palace):
 

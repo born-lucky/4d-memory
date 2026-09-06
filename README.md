@@ -20,7 +20,12 @@ Long sessions rot. Every frontier model degrades as the prompt fills — Chroma'
 
 Vector databases treat memory as cosine soup. That is an index, not a memory. Humans do not recall by nearest neighbor. They walk a **palace**.
 
-**fourdmem** turns quantized context into a **four-dimensional integer lattice**. The first three axes are a method-of-loci palace the agent actually moves through. The fourth axis is **valence** — good ↔ bad — so “recall the good stuff related to this” is a walk, not a prompt hack. Navigation **is** recall.
+**fourdmem** is a harness the agent **uses in its work**, the same way it uses Lean or Math-Verify: connect, call, get a clean slice, keep going. Two kinds of memory, judged when the note is written against **that** plan:
+
+- **Good** — part of the plan. Tied. Stays. Default recall.
+- **Bad** — useless to the creating prompt (cats during a proof). Not deleted. **Not tied** to the good. Cannot cloud the plan.
+
+The fourth axis \(w\) *is* that kind. The first three axes are a palace the agent walks. Navigation of the **good** graph **is** recall.
 
 The live prompt stays small. Everything else lives in a git-family content-addressable store and comes back only when the agent walks to it.
 
@@ -45,10 +50,10 @@ We do **not** rewrite conversation history. Dropping old messages to “compress
 | kNN as the product | kNN is internal; **loci** are the UX |
 | One undifferentiated pile | 3D rooms + **valence** as the 4th axis |
 | Lossy summaries | Lossless CAS (SHA-256, zlib now; pack/delta; zstd in extra `[pack]`) |
-| Goal hoped-for in the prompt | Goal is a **query-time gate** (the cats test) |
+| One pile, or “useful to what I am typing now” | **Two kinds**, judged at **store time** vs that plan |
 | Pretty dashboards | No lighting. Instant teleports. A retrieval engine. |
 
-**The cats test.** Goal: *prove Hilbert 4D encode/decode is bijective*. Stored: that proof note, and “I saw cats on screen.” `recall` must return the Hilbert note and must **not** contain `cats`. The cats blob stays on disk. We forget from the prompt, not from the universe.
+**The cats test (work loop).** Goal at store: *prove Hilbert 4D encode/decode is bijective*. Hilbert note → `good`, tied to the plan. “I saw cats on screen” → `bad`, kept in CAS, **not** on `plan.good`. `recall` is unclouded. Changing the live prompt to a poem about cats does **not** retie the junk. We do not forget the universe. We do not let it into the plan.
 
 ---
 
@@ -81,15 +86,14 @@ Invariants are checked with the same tools labs actually harness to models: **Le
 
 ## Status
 
-**Draft.** Architecture is written and review-revised. Implementation follows the [PR plan](docs/DESIGN.md#pr-plan): harness wrappers on the existing `fourdmem` package first, then CAS, Hilbert on \(L_4\), `Coord4` palace, valence, goal filter. `fourdmem eval v1` (PR-13) is the merge bar.
+Working core is in: `goal`, `store`, `judge`, `recall`, `cas`. The agent uses it in work. Kind is judged at store time. Default recall is the plan (good only). Palace/Hilbert PRs still follow the [PR plan](docs/DESIGN.md#pr-plan).
 
-v1 success bar (must be testable):
+v1 success bar:
 
-- `note` / `store` / `judge` / `navigate` / `recall`
-- Injected context ≤ 512 tokens (hard cap 1024), measured with tiktoken
-- Frozen cats fixture does not appear in recall (no `exclude=["cats"]` cheat)
-- Round-trip: text → 4D object → 3D locus → navigate → original bytes
-- Hilbert encode/decode bijection on all 34,816 \(L_4\) cells (Python exhaustive; Lean `Lattice4`)
+- Agent **calls** fourdmem during a task (same attachment as Math-Verify)
+- Two kinds: good tied to the creating plan, bad kept but untied
+- Cats stored under a Hilbert goal do not appear in default `recall`; CAS still has them
+- Changing the live prompt does not retie bad onto a new plan
 
 ---
 
@@ -108,15 +112,14 @@ Optional lab harnesses (Lean REPL, Math-Verify source, lm-eval, mini-swe-agent):
 pwsh -File scripts/bootstrap-harnesses.ps1
 ```
 
-Today the CLI is argparse (`fourdmem status`). Palace verbs land with the PR plan:
-
 ```text
-fourdmem store "Hilbert encode/decode is a bijection on Lattice4." --mnemonic library
-fourdmem go library
-fourdmem recall --goal "prove Hilbert 4D encode/decode is bijective"
-fourdmem judge here good --reason "Lean proof passed"
-fourdmem harness lean --cmd "def f := 2"
-fourdmem harness math-verify --gold "1/2" --answer "0.5"
+fourdmem goal "prove Hilbert 4D encode/decode is bijective"
+fourdmem store "Hilbert encode/decode is a bijection on Lattice4."
+fourdmem store "I saw cats on screen."
+fourdmem recall                  # good of that plan — no cats
+fourdmem recall --kind bad       # junk, explicit
+fourdmem cas <oid>               # lossless, even for bad
+fourdmem harness math-verify --gold "$\frac{1}{2}$" --answer "$\frac{1}{2}$"
 ```
 
 MCP: tools stay **always registered**. Recall is a tool result. The conversation prefix is never rewritten.

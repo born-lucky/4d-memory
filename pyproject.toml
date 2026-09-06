@@ -41,3 +41,4 @@ packages = ["src/fourdmem"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+pythonpath = ["src"]

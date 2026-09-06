@@ -15,9 +15,16 @@
 
 Context rot is the failure mode of long AI sessions: as the prompt fills, the model degrades, forgets, and recalls the wrong things. This project is not a vector database and not a game title. It is a **harness** the agent uses whenever — to store memories, write notes, jot things down, and actually recall — the way a human uses a notebook plus a method-of-loci palace.
 
-The mechanism is concrete. Incoming context is **quantized** (content-addressed, product-quantized, lattice-snapped) into objects that live on a **4-dimensional integer lattice**. The fourth axis is **valence** (good ↔ bad). The first three axes are a mnemonic palace the agent walks. A tiny custom engine shows a **3D projection of that 4D store**. Navigation *is* recall: the agent moves among named landmarks, and the live prompt receives only a small high-signal slice. Everything else stays in the 4D store and is retrieved by moving through it, never by rewriting conversation history.
+The product is not “a memory library that exists.” The product is **an agent that uses this in its work**, the same way it uses Math-Verify or the Lean REPL: it connects, it stores, it judges, it recalls, and the work is cleaner because of it. Unused = failed.
 
-v1 implements 4D fully: lattice, Hilbert keys that actually cover \(w = +8\), lossless git-family object store, mnemonic movement with `Coord4` occupancy, goal-conditioned pertinence filter, valence judgment, a running 3D engine, and the math/coding harnesses as first-class tools. Dimensions 5, 6, and 7 are specified as real extra lattice axes (session epoch, principle-alignment, echo/becoming), not slogans.
+There are **two kinds of memory**, frozen at creation:
+
+- **Good** — part of the plan that was live when the memory was written. Tied to that plan. Stays. Default `recall` walks only this.
+- **Bad** — useless to *that* creating prompt (cats on screen during a Hilbert proof). Not deleted. **Not tied** to the good / the plan. It cannot cloud the plan. Explicit `recall --kind bad` or `cas show` still retrieve it.
+
+Bad is **not** “irrelevant to the prompt I am typing now.” Kind is judged against `goal_at_store`. Switching the live prompt does not retie old junk onto a new plan.
+
+The store is a **4-dimensional integer lattice**. \(w\) is the kind axis (`good \mapsto +8`, `bad \mapsto -8`). The first three axes are a mnemonic palace. Navigation *is* recall of the **good** graph. The live prompt stays a small high-signal slice. Prefix is never rewritten.
 
 ---
 
@@ -25,7 +32,7 @@ v1 implements 4D fully: lattice, Hilbert keys that actually cover \(w = +8\), lo
 
 ### Current state of this repo
 
-This **is** a git repository (`main`, remote `https://github.com/born-lucky/4d-memory.git`). The public tree already has a Python package and docs. Palace code is not implemented yet. An engineer following PR-1 must extend this tree, not recreate it.
+This **is** a git repository (`main`, remote `https://github.com/born-lucky/4d-memory.git`). The public tree has a Python package, docs, and a **working** `Store`: two kinds, CAS, `goal`/`store`/`judge`/`recall`. Palace/Hilbert still follow the PR plan. An engineer extends this tree.
 
 Tracked today:
 
@@ -33,7 +40,9 @@ Tracked today:
 | --- | --- |
 | `pyproject.toml` | `fourdmem` 0.1.0, hatchling, `requires-python = ">=3.12"`, script `fourdmem = "fourdmem.cli:main"`, `packages = ["src/fourdmem"]` |
 | `src/fourdmem/__init__.py` | `__version__ = "0.1.0"` |
-| `src/fourdmem/cli.py` | **argparse** stub: `fourdmem` / `fourdmem status` |
+| `src/fourdmem/cli.py` | argparse: `goal store judge recall cas harness status` |
+| `src/fourdmem/api.py` | `Store` — two kinds, plan.good / plan.bad, CAS |
+| `tests/test_work_loop.py` | cats untied, not deleted; live prompt does not retie |
 | `docs/DESIGN.md`, `docs/MATH.md` | architecture + public math |
 | `README.md`, `LICENSE` (MIT), `CONTRIBUTING.md`, `.gitignore` | public repo |
 | `scripts/bootstrap-harnesses.ps1` | shallow-clones vendor trees (gitignored) |
@@ -54,7 +63,7 @@ Local machine (2026-09-06), for implementers — **not** product defaults:
 1. **Context rot.** Dumping more history into the prompt does not produce better memory. It produces worse recall and higher cost.
 2. **Wrong compression model (Headroom).** The local clone at `C:\Users\coled\Projects\headroom` taught a hard negative lesson: treating compression as “drop old messages from the prefix” (`IntelligentContextManager`, `DropByScoreStrategy`, `frozen_message_count: 0`) busts provider prompt caches and destroys the hot zone. The correct model, documented in `headroom\REALIGNMENT\00-overview.md`, is **passthrough is sacred; offload to a side channel; retrieve on demand**. This harness is that side channel.
 3. **kNN-as-UX.** Embedding nearest-neighbor is a fine *internal index*. It is a terrible primary interface for an agent that needs to *know where it put something*. Humans do not recall by cosine; they walk a palace.
-4. **No judgment, no goal.** A store that cannot mark good vs bad, and cannot drop (from the *injected slice*, not from disk) what is not pertinent to the current goal, will keep “I saw cats” forever in the prompt.
+4. **No two-kind split.** A store that treats everything as one pile, or that re-scores “useful to the live prompt,” will either keep cats in the plan or retie junk when the prompt changes. Kind is judged **when the memory is created**, against that plan. Good stays tied. Bad stays, untied. Nothing clouds the plan.
 
 ### What already exists that we will use, not reimplement
 
@@ -77,9 +86,10 @@ Math-Verify note for Windows: `parse()` uses a multiprocessing timeout (`parsing
 
 The **v1 success bar** is PRs 1–8 plus PR-13. PRs 9–12 and 14 are real work but not the merge bar for “v1 works.”
 
-1. Agent can `note`, `store`, `judge` (good/bad), `navigate` (mnemonic move), `recall` (goal-pertinent slices only).
+0. **Work loop.** The agent actually calls `fourdmem` during a task the way it calls Math-Verify: `goal` → `store` → `recall`. A green library that is never invoked has failed v1.
+1. Agent can `store`, `judge` (good/bad), `recall`. Default recall is **good of the creating plan only**.
 2. Injected context token budget is **bounded and measured** (`tiktoken` `cl100k_base`, default 512, hard cap 1024).
-3. Non-pertinent distractors (the frozen cats fixture) **do not appear in recall**.
+3. **Two kinds.** Cats stored under a Hilbert goal is `bad`: not in plan recall, still in CAS, not on `plan.good`. Hilbert note is `good` and tied. Changing the live prompt does not retie cats.
 4. Round-trip: store text → quantized 4D object → 3D locus → navigate → original bytes via content-addressable retrieve (lossless).
 5. Hilbert encode/decode is bijective on **the same set Python stores**: \(L_4\) / `Lattice4` (34,816 cells). Lean checks that type. Projection invertibility is Python vs sympy `Rational` on a grid. Math-Verify is **harness smoke**, not a 4D-index invariant.
 6. Vendor harnesses are invokable as tools/scripts in this repo (PR-1), on top of the existing package.
@@ -110,7 +120,9 @@ These are binding for v1. Changing one is a design revision, not a drive-by.
 
 | # | Decision | Rationale |
 | --- | --- | --- |
-| K1 | **4th axis `w` is valence (good/bad), quantized to \(\mathbb{Z}\) in \([-8,+8]\).** Goal pertinence is **not** an axis. `query_mode` is a field on the `goal` object (query parameter), not a lattice axis. | A spatial axis must be a stable property of an object. Goals change every prompt; putting goal on an axis would re-embed the palace every turn and destroy loci. Valence is a judgment attached to the object: nearby on `w` means similarly judged, so “recall the good stuff related to this” is a walk toward \(+w\) in the same \((x,y,z)\) neighborhood. Pertinence is a **query-time gate**. |
+| K0 | **The harness is used in work.** Same attachment as Math-Verify / Lean REPL: the agent calls it, it returns, the task is cleaner. A dormant palace is a failed product. | Operator: “not just to have a memory harness… so it can use it in its work, and it actually works.” |
+| K1 | **Two kinds, judged at store time.** `Kind ∈ {good, bad}`. `good ↦ w=+8`, `bad ↦ w=-8`. Kind is decided against **`goal_at_store`** (the creating prompt / plan), not the live prompt. Auto: Jaccard \(\ge \tau\) → good, else bad. Agent may override with `judge` / `--kind`. | Operator: bad is “useless to the prompt when the memory was created,” not “useless to what I am typing now.” |
+| K15 | **Bad is kept, not tied.** `plan.good` is the plan graph. `plan.bad` is a separate list with **no edges** into good. Default `recall` = `plan.good` only. `cas.get` still returns bad bytes. Changing the live goal does not retie old bad onto a new plan. | Operator: “we're not going to forget completely, but we're not going to tie it to the good… part of the plan… so nothing clouds it.” Query-time pertinence against the *current* prompt is **not** what kind means. |
 | K2 | **Winner spatial model: \(L_4\) + equal-width 5-bit Skilling Hilbert (K13) + axis-aligned 3-flat blanket + perspective 4D→3D projection.** Occupancy, pack keys, and snapshots are `Coord4` from PR-5 onward. | Implementable, invertible, locality-preserving, and actually four-dimensional. Morton is the debug 5-bit interleave. Givens rotate the blanket later; v1 navigation is axis-aligned **stairs**, not a 3D store with a sidecar int. |
 | K3 | **Winner object layer: git-family CAS (SHA-256, git-style headers, zlib loose objects, Hilbert-ordered pack + copy/insert delta).** zstd is optional extra `[pack]` (PR-11), not a core install requirement for PRs 1–10. Pack CRC is **IEEE CRC-32** (`zlib.crc32`), not CRC32C. | Lossless reconstruction is a v1 success bar. CPython 3.12 has `zlib.crc32`, not Castagnoli. Quantization indexes; it does not destroy bytes. |
 | K4 | **Winner “quantize context”: 256-bit simhash + 64-byte hashed n-gram sketch, then product quantization (M=8, k=256) in numpy. No FAISS dependency in v1.** | FAISS is not in the venv. PQ is a real algorithm (Jégou 2011) we can implement in ~200 lines of numpy. OPQ identity rotation until 10k objects. kNN over PQ codes is **internal only**. |
@@ -360,7 +372,29 @@ Steps:
 
 Quantization **never replaces** the blob. Recall of the original is always `cas.get(oid)`.
 
-### 4. Goal-conditioned pertinence (the cats rule)
+### 4. Two kinds: good tied to the plan, bad kept but untied
+
+Every `store` happens under a **creating prompt** (`goal_at_store`). That prompt is the plan. Kind is frozen then:
+
+| Kind | \(w\) | Tied to `plan.good`? | Default `recall`? | Deleted? |
+| --- | --- | --- | --- | --- |
+| `good` | \(+8\) | yes | yes | no |
+| `bad` | \(-8\) | **no** (listed only on `plan.bad`) | **no** | **no** |
+
+**Bad is not “off-topic for the live prompt.”** Live prompt changes. Kind does not. Cats stored during a Hilbert proof stay `bad` for that plan even if the next prompt is about cats.
+
+Auto-kind at store (agent may override):
+
+```text
+kind = good  if  jaccard(tokens(goal_at_store), tokens(text)) >= τ  else  bad
+τ = 0.35
+```
+
+`judge oid good|bad` reties: good joins `plan.good` and leaves `plan.bad`; bad does the reverse and drops any landmark.
+
+Default `recall` returns titles+oids+first-lines of **`plan.good` only**. `recall --kind bad` is explicit inspection. `cas show` is lossless for both. The good graph has **no edges** to bad, so nothing clouds the plan.
+
+Query-time scoring against the *current* prompt is **not** the kind system. Neighborhood `query_mode` may still walk \(w\) bands for navigation. It must not retie kinds.
 
 Every prompt has a **goal**. The goal is an object (`type=goal`) and also the current `refs/goal`. `query_mode` (`neutral|prefer_good|prefer_bad`) lives **on the goal object**. It is not a lattice axis and must not be promoted onto \(w\).
 
@@ -398,13 +432,12 @@ The primary cats test **does not set `exclude=["cats"]`**. Exclude-terms get a *
 | `goal.exclude` | **empty** |
 | Hilbert note blob | `Hilbert encode/decode is a bijection on Lattice4.\n` |
 | Hilbert title | `Hilbert bijection` |
-| Hilbert `Coord4` | `(3, 5, 1, 0)` landmark `library` |
+| Hilbert `Coord4` | \(w=+8\), landmark `library` — **kind good**, on `plan.good` |
 | Cats blob | `I saw cats on screen.\n` |
 | Cats title | `cats on screen` |
-| Cats `Coord4` | `(12, 2, 0, 0)` — **no landmark**, not on any stored path |
-| Agent spawn | `Coord4 (0, 0, 0, 0)` — default \(w=0\), unjudged |
-| Agent procedure | `go library` then `recall` (lands on `(3,5,1,0)`, same cell as Hilbert) |
-| Stored path | empty, or only vertices at `library` `(3,5,1,0)` |
+| Cats `Coord4` | \(w=-8\) — **kind bad**, on `plan.bad` only, no landmark, no edge into good |
+| Agent procedure | `goal` → `store` Hilbert → `store` cats → `recall` (default kind=good) |
+| Stored path | empty; recall is the plan list, not a walk |
 
 **What `recall` returns (bytes):** a UTF-8 block of lines `title <space> oid_hex` plus the **first line of the blob** (not the full blob). Example:
 
