@@ -17,12 +17,12 @@ dependencies = [
   "sympy>=1.14",
   "numpy>=2.0",
   "tiktoken>=0.14",
-  "zstandard>=0.23",
 ]
 
 [project.optional-dependencies]
 dev = ["pytest>=8", "mini-swe-agent>=2.4"]
 harness = ["mini-swe-agent>=2.4"]
+pack = ["zstandard>=0.23"]
 
 [project.scripts]
 fourdmem = "fourdmem.cli:main"

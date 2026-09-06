@@ -6,8 +6,8 @@
 | Author | Cole / Grok design loop |
 | Date | 2026-09-06 |
 | Status | Draft |
-| Repo | `C:\Users\coled\Projects\4d-memory` |
-| Package / CLI | `fourdmem` |
+| Repo | https://github.com/born-lucky/4d-memory (`C:\Users\coled\Projects\4d-memory`) |
+| Package / CLI | `fourdmem` (argparse; `fourdmem.cli:main`) |
 
 ---
 
@@ -17,7 +17,7 @@ Context rot is the failure mode of long AI sessions: as the prompt fills, the mo
 
 The mechanism is concrete. Incoming context is **quantized** (content-addressed, product-quantized, lattice-snapped) into objects that live on a **4-dimensional integer lattice**. The fourth axis is **valence** (good ↔ bad). The first three axes are a mnemonic palace the agent walks. A tiny custom engine shows a **3D projection of that 4D store**. Navigation *is* recall: the agent moves among named landmarks, and the live prompt receives only a small high-signal slice. Everything else stays in the 4D store and is retrieved by moving through it, never by rewriting conversation history.
 
-v1 implements 4D fully: lattice, Hilbert keys, lossless git-family object store, mnemonic movement, goal-conditioned pertinence filter, valence judgment, a running 3D engine, and the already-downloaded math/coding harnesses wired as first-class tools. Dimensions 5, 6, and 7 are specified as real extra lattice axes (time, principle-alignment, echo/becoming), not slogans.
+v1 implements 4D fully: lattice, Hilbert keys that actually cover \(w = +8\), lossless git-family object store, mnemonic movement with `Coord4` occupancy, goal-conditioned pertinence filter, valence judgment, a running 3D engine, and the math/coding harnesses as first-class tools. Dimensions 5, 6, and 7 are specified as real extra lattice axes (session epoch, principle-alignment, echo/becoming), not slogans.
 
 ---
 
@@ -25,18 +25,29 @@ v1 implements 4D fully: lattice, Hilbert keys, lossless git-family object store,
 
 ### Current state of this repo
 
-The product tree is empty except for vendor harnesses and a project venv:
+This **is** a git repository (`main`, remote `https://github.com/born-lucky/4d-memory.git`). The public tree already has a Python package and docs. Palace code is not implemented yet. An engineer following PR-1 must extend this tree, not recreate it.
 
-- Repo root: `C:\Users\coled\Projects\4d-memory` — no `pyproject.toml`, no `src/`, not yet a git repository.
-- Venv: `C:\Users\coled\Projects\4d-memory\.venv` — CPython 3.12.11 (uv-managed at `C:\Users\coled\AppData\Roaming\uv\python\cpython-3.12.11-windows-x86_64-none`).
-- Installed and verified:
-  - `math-verify 0.9.0` (HuggingFace), `latex2sympy2-extended 1.11.0`, `sympy 1.14.0`, `numpy 2.5.3`
-  - `mini-swe-agent 2.4.6` (editable from `vendor\coding\mini-swe-agent\src`)
-  - `tiktoken 0.14.0` (token budgets)
-  - stdlib `zlib` 1.3.1
-- **Not** installed (we will add or implement): `zstandard`, FAISS, pygame.
-- Math clones: `vendor\math\Math-Verify`, `vendor\math\lm-evaluation-harness` (`lm_eval` 0.4.14.dev0 in the clone), `vendor\math\lean-repl`.
-- Lean: elan 4.2.4 at `C:\Users\coled\scoop\persist\elan\.elan`; default toolchain **Lean 4.33.1** / **Lake 5.0.0** (`commit 819816b`). The vendor REPL's `lean-toolchain` file pins `leanprover/lean4:v4.34.0-rc2` (also present at `C:\Users\coled\.elan\toolchains\leanprover--lean4---v4.34.0-rc2`). Project policy: pin **4.33.1** and override the REPL toolchain in our wrapper.
+Tracked today:
+
+| Path | What it is |
+| --- | --- |
+| `pyproject.toml` | `fourdmem` 0.1.0, hatchling, `requires-python = ">=3.12"`, script `fourdmem = "fourdmem.cli:main"`, `packages = ["src/fourdmem"]` |
+| `src/fourdmem/__init__.py` | `__version__ = "0.1.0"` |
+| `src/fourdmem/cli.py` | **argparse** stub: `fourdmem` / `fourdmem status` |
+| `docs/DESIGN.md`, `docs/MATH.md` | architecture + public math |
+| `README.md`, `LICENSE` (MIT), `CONTRIBUTING.md`, `.gitignore` | public repo |
+| `scripts/bootstrap-harnesses.ps1` | shallow-clones vendor trees (gitignored) |
+| `THIRD_PARTY.md` | Apache/MIT notices for pip + local vendor clones |
+
+Not tracked (and must stay that way): `vendor/`, `.venv/`, `.fourdmem/`.
+
+Local machine (2026-09-06), for implementers — **not** product defaults:
+
+- Venv `C:\Users\coled\Projects\4d-memory\.venv` — CPython 3.12.11 (uv).
+- Installed: `math-verify 0.9.0`, `latex2sympy2-extended 1.11.0`, `sympy 1.14.0`, `numpy 2.5.3`, `tiktoken 0.14.0`, `mini-swe-agent 2.4.6` (editable from `vendor\coding\mini-swe-agent\src`). stdlib `zlib` 1.3.1. sqlite 3.49.1 with FTS5.
+- **Not** in the venv: `zstandard` (declared in `pyproject.toml` as optional extra `[pack]`, used in PR-11), FAISS, pygame, Typer (Typer 0.27.2 arrives only if mini-swe is installed; **fourdmem does not depend on it**).
+- Vendor clones (gitignored, bootstrap locally): `vendor\math\Math-Verify` (Apache-2.0), `vendor\math\lm-evaluation-harness` (MIT + task-dataset caveat), `vendor\math\lean-repl` (Apache-2.0, `lean-toolchain` = `leanprover/lean4:v4.34.0-rc2`), `vendor\coding\mini-swe-agent` (MIT).
+- Lean: `elan` / `lean` / `lake` are **not on PATH**. Two elan homes exist on this box: scoop persist `C:\Users\coled\scoop\persist\elan\.elan` (`stable` → Lean **4.33.1** / Lake 5.0.0, commit `819816b`) and `C:\Users\coled\.elan` (Lean **4.34.0-rc2** only). See K10: discover elan; do not hardcode these paths.
 
 ### Pain this product exists to kill
 
@@ -47,16 +58,16 @@ The product tree is empty except for vendor harnesses and a project venv:
 
 ### What already exists that we will use, not reimplement
 
-These are first-class tools the agent uses **while building this repo** and **while the memory system runs**. They are not optional eval toys.
+These are first-class tools the agent uses **while building this repo** and **while the memory system runs**. They are not optional eval toys. Obtain vendor clones with `scripts/bootstrap-harnesses.ps1`. Runtime Python deps come from pip (`math-verify`), not from a force-added `vendor/` tree.
 
 | Harness | Path / install | What the agent actually calls |
 | --- | --- | --- |
-| HuggingFace Math-Verify 0.9.0 | clone `vendor\math\Math-Verify`; venv package `math_verify` | `from math_verify import parse, verify` (`parser.py:649`, `grader.py:755`) |
+| HuggingFace Math-Verify 0.9.0 | pip `math-verify`; optional clone `vendor\math\Math-Verify` | `from math_verify import parse, verify` (`parser.py:649`, `grader.py:755`) |
 | EleutherAI lm-evaluation-harness | clone `vendor\math\lm-evaluation-harness` | `lm_eval.simple_evaluate(...)` / `lm-eval run` (`docs\python-api.md`) |
 | Lean 4 community REPL | clone `vendor\math\lean-repl`; `lake exe repl` JSON stdin/stdout | `{"cmd": "..."}` / `{"tactic": "...", "proofState": n}` (`REPL\Main.lean`, `REPL\JSON.lean`) |
-| mini-swe-agent v2.4.6 | clone `vendor\coding\mini-swe-agent`; editable in venv | `DefaultAgent.run(task)` (`agents\default.py`); bash-only loop, linear history |
+| mini-swe-agent v2.4.6 | extra `[harness]`; optional clone `vendor\coding\mini-swe-agent` | `DefaultAgent` (`agents\default.py`); POSIX-first bash loop; see §12.3 |
 
-Math-Verify note for Windows: `parse()` uses a multiprocessing timeout (`parsing_timeout=5`). A one-shot `python -c` spawn can raise `WinError 6` on handle duplication. The harness wrapper **must** run Math-Verify in-process with `parsing_timeout=0` on Windows, or in a durable worker process, never as a throwaway `-c`.
+Math-Verify note for Windows: `parse()` uses a multiprocessing timeout (`parsing_timeout=5`). A one-shot `python -c` spawn can raise `WinError 6` on handle duplication. The harness wrapper **must** run Math-Verify in-process with `parsing_timeout=0` on Windows, or in a durable worker process, never as a throwaway `-c`. `timeout_seconds <= 0` is a no-op decorator in `math_verify.utils.timeout`.
 
 ---
 
@@ -64,15 +75,17 @@ Math-Verify note for Windows: `parse()` uses a multiprocessing timeout (`parsing
 
 ### Goals (v1, testable)
 
+The **v1 success bar** is PRs 1–8 plus PR-13. PRs 9–12 and 14 are real work but not the merge bar for “v1 works.”
+
 1. Agent can `note`, `store`, `judge` (good/bad), `navigate` (mnemonic move), `recall` (goal-pertinent slices only).
 2. Injected context token budget is **bounded and measured** (`tiktoken` `cl100k_base`, default 512, hard cap 1024).
-3. Non-pertinent distractors (the cats example) **do not appear in recall**.
+3. Non-pertinent distractors (the frozen cats fixture) **do not appear in recall**.
 4. Round-trip: store text → quantized 4D object → 3D locus → navigate → original bytes via content-addressable retrieve (lossless).
-5. At least one 4D-index invariant is machine-checked with Lean and/or sympy/Math-Verify (Hilbert encode/decode bijection on a finite 4D grid; projection identity).
-6. Vendor harnesses are invokable as tools/scripts in this repo (PR-1).
+5. Hilbert encode/decode is bijective on **the same set Python stores**: \(L_4\) / `Lattice4` (34,816 cells). Lean checks that type. Projection invertibility is Python vs sympy `Rational` on a grid. Math-Verify is **harness smoke**, not a 4D-index invariant.
+6. Vendor harnesses are invokable as tools/scripts in this repo (PR-1), on top of the existing package.
 7. Running engine: headless always, optional window; **no lighting**, almost nothing decorative, movement nearly instant.
 8. Paths are stored as memory. Principles persist in a real data model. Language (notes, names, mnemonics) is a first-class object type.
-9. Compression is the git family: content-addressable objects, delta, packfiles, zlib/zstd.
+9. Compression is the git family: content-addressable objects, delta, packfiles, zlib; zstd in the pack extra (PR-11).
 
 ### Non-goals (v1)
 
@@ -80,11 +93,14 @@ Math-Verify note for Windows: `parse()` uses a multiprocessing timeout (`parsing
 - Replacing the conversation prefix with a summary (Headroom ICM). We **offload**, we do not mutate history.
 - Being a general vector DB / RAG product. kNN is an internal accelerator.
 - Training or hosting an embedding model. v1 descriptors are simhash + hashed n-grams + optional later embeddings as a *descriptor slot*, not as the palace.
-- Bit-compatible git packfiles (we copy the *family* of algorithms, not `git fsck` compatibility). Hash is SHA-256, not SHA-1.
+- Bit-compatible git packfiles, and **using the git binary as the store** (A8). We copy the *family* of algorithms, not `git fsck` compatibility. Hash is SHA-256, not SHA-1.
 - Quaternions as 4D rotations (they rotate 3D). 4D uses Givens / even Clifford rotors.
-- Hyperdimensional computing as the spatial model (10k-D is not a palace). VSA is a language-binding layer only.
+- Hyperdimensional computing as the spatial model (10k-D is not a palace). VSA is a language-binding layer only, and only after PR-10.
 - Implementing dimensions 5–7 as running axes. v1 ships the 4D lattice and the typed extension points.
-- Mutating vendor trees except via our wrappers / a pinned `lean-toolchain` override.
+- **Committing `vendor/`.** Binding. CI installs `math-verify` from pip and Lean from elan. Bootstrap is the only way to obtain vendor trees. `git add -f vendor/` is a license incident (Issue 6).
+- Mutating vendor trees (do not rewrite `vendor/math/lean-repl/lean-toolchain`).
+- Making mini-swe-agent the only allowed implementation path (Windows: `LocalEnvironment` is cmd.exe; see §12.3).
+- Typer, pydantic, FAISS, `google-crc32c` as `fourdmem` dependencies.
 
 ---
 
@@ -94,18 +110,20 @@ These are binding for v1. Changing one is a design revision, not a drive-by.
 
 | # | Decision | Rationale |
 | --- | --- | --- |
-| K1 | **4th axis `w` is valence (good/bad), quantized to \(\mathbb{Z}\) in \([-8,+8]\).** Goal pertinence is **not** an axis. | The operator asked for both “4D so it judges good or bad” and “every prompt has a goal.” A spatial axis must be a stable property of an object. Goals change every prompt; putting goal on an axis would re-embed the palace every turn and destroy loci. Valence is a judgment attached to the object: nearby on `w` means similarly judged, so “recall the good stuff related to this” is a walk toward \(+w\) in the same \((x,y,z)\) neighborhood. Pertinence is a **query-time gate**. |
-| K2 | **Winner spatial model: \(\mathbb{Z}^4\) lattice + n-D Hilbert keys (Skilling) + axis-aligned 3-flat blanket + perspective 4D→3D projection.** | Implementable, invertible, locality-preserving, and actually four-dimensional. Morton is shipped as a debug alternative. Geometric algebra rotors (Givens in 6 planes) rotate the blanket later; v1 navigation is axis-aligned. |
-| K3 | **Winner object layer: git-family CAS (SHA-256, git-style headers, zlib loose objects, Hilbert-ordered pack + copy/insert delta + zstd).** | Lossless reconstruction is a v1 success bar. This is the same compression family GitHub actually uses. Quantization is for *indexing and placement*, not for destroying bytes. |
+| K1 | **4th axis `w` is valence (good/bad), quantized to \(\mathbb{Z}\) in \([-8,+8]\).** Goal pertinence is **not** an axis. `query_mode` is a field on the `goal` object (query parameter), not a lattice axis. | A spatial axis must be a stable property of an object. Goals change every prompt; putting goal on an axis would re-embed the palace every turn and destroy loci. Valence is a judgment attached to the object: nearby on `w` means similarly judged, so “recall the good stuff related to this” is a walk toward \(+w\) in the same \((x,y,z)\) neighborhood. Pertinence is a **query-time gate**. |
+| K2 | **Winner spatial model: \(L_4\) + equal-width 5-bit Skilling Hilbert (K13) + axis-aligned 3-flat blanket + perspective 4D→3D projection.** Occupancy, pack keys, and snapshots are `Coord4` from PR-5 onward. | Implementable, invertible, locality-preserving, and actually four-dimensional. Morton is the debug 5-bit interleave. Givens rotate the blanket later; v1 navigation is axis-aligned **stairs**, not a 3D store with a sidecar int. |
+| K3 | **Winner object layer: git-family CAS (SHA-256, git-style headers, zlib loose objects, Hilbert-ordered pack + copy/insert delta).** zstd is optional extra `[pack]` (PR-11), not a core install requirement for PRs 1–10. Pack CRC is **IEEE CRC-32** (`zlib.crc32`), not CRC32C. | Lossless reconstruction is a v1 success bar. CPython 3.12 has `zlib.crc32`, not Castagnoli. Quantization indexes; it does not destroy bytes. |
 | K4 | **Winner “quantize context”: 256-bit simhash + 64-byte hashed n-gram sketch, then product quantization (M=8, k=256) in numpy. No FAISS dependency in v1.** | FAISS is not in the venv. PQ is a real algorithm (Jégou 2011) we can implement in ~200 lines of numpy. OPQ identity rotation until 10k objects. kNN over PQ codes is **internal only**. |
 | K5 | **Primary UX is method-of-loci movement, not kNN.** Named landmarks, `go`/`step`/`follow`/`ascend`/`descend`. | Operator constraint. kNN may propose a locus at store time; the agent recalls by walking. |
-| K6 | **Live prompt is a passthrough. The palace is a side channel.** Recall injects only as a tool result (or a bounded live-zone tail block), never by rewriting system prompt or old turns. Tools are **always registered**. | Headroom `REALIGNMENT\00-overview.md`: dropping/summarizing prefix busts caches; flipping tools on/off busts the tools array. CCR is the right *idea* (hash-addressed retrieve); this palace is the persistent CCR for *memory*, not for tool-output crushing. |
+| K6 | **Live prompt is a passthrough. The palace is a side channel.** Recall injects only as a tool result (or a bounded live-zone tail block), never by rewriting system prompt or old turns. Tools are **always registered**. | Headroom `REALIGNMENT\00-overview.md`: dropping/summarizing prefix busts caches; flipping tools on/off busts the tools array. |
 | K7 | **Tiny custom engine, not Unity/Godot.** Headless JSON snapshot is the source of truth. Optional wireframe window (boxes + labels, no lighting, instant teleports). | This is a retrieval engine. A game engine would eat the project. |
-| K8 | **VSA/HDC earns a narrow keep: language binding, not space.** D=8192 bipolar; bind names to loci; bundle room occupants; cleanup memory for landmark lookup. | Operator: language is first-class. HD vectors are not a 4D palace. |
-| K9 | **Principles are a real object type plus an echo loop, not mysticism.** The system is the organization of itself: principles persist; the store reorganizes; the agent is not a person. | Encoded as `principle` objects, `echo_count`, batched `reorganize`. |
-| K10 | **Pin Lean 4.33.1 / Lake 5.0.0** via `ELAN_HOME=C:\Users\coled\scoop\persist\elan\.elan` and a project `lean-toolchain`. Override vendor REPL’s 4.34.0-rc2 pin in the wrapper. | Matches the installed default toolchain. Avoid mixed proof environments. |
-| K11 | **Python package `fourdmem`, Python 3.12, uv.** Engine and store in Python for v1; hot loops (Hilbert, PQ scan) in numpy. No Rust rewrite in v1. | Empty repo, venv already Python. Speed targets below are hit in numpy at 10k–100k objects. |
-| K12 | **Default recall 512 tokens, hard cap 1024, measured with `tiktoken` `cl100k_base`.** Exceeding cap truncates by pertinence rank, never silently overruns. | Product outcome is saving the context window. If we cannot measure, we did not ship. |
+| K8 | **VSA/HDC earns a narrow keep: language binding, not space.** D=8192 bipolar; bind names to loci; bundle room occupants; cleanup memory for landmark lookup. **v1 recall does not use VSA** (stub 0, renormalized weights until PR-10). | Operator: language is first-class. HD vectors are not a 4D palace. PR-8 must not be blocked on PR-10. |
+| K9 | **Principles are a real object type plus an echo loop, not mysticism.** `reorganize` never mints statements; `principle assert` is a separate verb. | Encoded as `principle` objects, `echo_count`. Auto-reorganize cannot block on an agent-authored sentence. |
+| K10 | **Two Lake packages, two recorded toolchains, portable elan discovery.** (1) Vendor REPL: leave `vendor/math/lean-repl/lean-toolchain` as `leanprover/lean4:v4.34.0-rc2`; `lake exe repl` in that cwd. (2) Project proofs: `lean/FourDMem` is a **separate** Lake package with `lean/lean-toolchain` = `leanprover/lean4:v4.33.1`. Never feed 4.33 `.olean` into a 4.34 REPL. Discover elan via `ELAN_HOME`, then `elan` on PATH, then `$HOME/.elan` / `%USERPROFILE%\.elan`, then a last-resort probe of scoop persist **logged, not defaulted in config**. | Compiling 4.34-targeted REPL sources with 4.33.1 is unproven. Lake reads `lean-toolchain` in cwd, not `elan --toolchain`. Machine paths are not Key Decisions. |
+| K11 | **Python package `fourdmem` already exists** (hatchling, Python ≥3.12, uv). CLI is **argparse** (`src/fourdmem/cli.py`). Dataclasses, not pydantic. Engine and store in Python; hot loops in numpy. No Rust rewrite in v1. | Do not recreate `pyproject.toml` in PR-1. Typer is a mini-swe transitive, not ours. |
+| K12 | **Default recall 512 tokens, hard cap 1024, measured with `tiktoken` `cl100k_base`.** Exceeding cap truncates by pertinence rank, never silently overruns. | Product outcome is saving the context window. |
+| K13 | **Hilbert is honest to \(L_4\). One on-disk coder.** Keep \(w \in [-8,+8]\) (17 values). Injection \(\iota(x,y,z,w)=(x,y,z,w+8)\) with \(w+8\in[0,16]\), then **equal-width 5-bit Skilling 2004** on the padded hypercube \([0,32)^4\). Keys are 20 bits in `uint32`. Decode rejects points not in \(L_4\). Lean theorem is on `Lattice4` (34,816 cells), the same set Python encodes. **Do not silently drop \(w=+8\).** Mixed-width \((4,4,3,5)\) is **not** v1 (different map, not the cited paper). | 4-bit \(w'\) cannot hold 16. Skilling is equal bits per axis. Two bijections on \(L_4\) are not the same pack order. |
+| K14 | **Every occupant, pack key, and snapshot is `Coord4` from PR-5.** Palace graph edges are 3D + valence stairs; occupancy is never `Coord3`. `max_occupants_per_cell = 16`. Single-writer, no lock in v1. | Stops v1 collapsing to a 3D palace plus a sidecar integer. |
 
 ---
 
@@ -127,7 +145,7 @@ flowchart LR
     API["CLI / MCP / JSON-RPC"]
     Goal["Goal filter"]
     Palace["Mnemonic graph\n3-flat blanket"]
-    Lattice["Z^4 lattice + Hilbert"]
+    Lattice["L_4 lattice + Hilbert"]
     PQ["Simhash + PQ index"]
     VSA["HDC names / cleanup"]
     Prin["Principles + echo"]
@@ -136,7 +154,7 @@ flowchart LR
 
   subgraph Disk[".fourdmem/"]
     CAS["objects/ SHA-256 zlib"]
-    Pack["pack/ Hilbert-order delta zstd"]
+    Pack["pack/ Hilbert-order delta zlib"]
     Refs["refs/ HEAD principles goals"]
   end
 
@@ -164,6 +182,8 @@ flowchart LR
 
 The conversation prefix (system prompt, tools array, old turns) is **never rewritten**. The agent calls tools. Tool results land in the live zone. That is how memory enters the model.
 
+One process owns `.fourdmem/` (**single-writer, no lock in v1**). Concurrent CLI + MCP is undefined.
+
 ### 2. The 4D mathematical model (the winner)
 
 #### 2.1 Lattice
@@ -176,7 +196,9 @@ L_4 = \mathbb{Z}^4 \cap \bigl([0,X)\times[0,Y)\times[0,Z)\times[-W,W]\bigr)
 
 v1 defaults: \(X=16\), \(Y=16\), \(Z=8\), \(W=8\).
 
-That is \(16\times16\times8\times17 = 34{,}816\) cells. Multiple objects may share a cell. The palace is a **view** over the object store, not 1:1 with objects.
+That is \(16\times16\times8\times17 = 34{,}816\) cells. Multiple objects may share a cell, up to `max_occupants_per_cell = 16`. The palace is a **view** over the object store, not 1:1 with objects.
+
+Why this box, not a power-of-two 16×16×16×16 cube: eight floors is a palace story count; 256 rooms per floor is walkable; **17 valence levels exist so both poles \(\pm 1.0\) and zero are representable**. Shrinking \(w\) to 16 values would drop \(w=+8\). Expanding \(z\) to 16 would add unused floors, not fix Hilbert.
 
 Coordinates:
 
@@ -187,15 +209,29 @@ Coordinates:
 | \(z\) | up | floors / stories | \([0,8)\) | same |
 | \(w\) | valence | bad \(\rightarrow\) good | \([-8,+8]\) | `judge` (default 0) |
 
-A point is `Coord4 = tuple[int, int, int, int]` with the invariant
+A point is `Coord4 = tuple[int, int, int, int]`:
 
 ```python
+Coord4 = tuple[int, int, int, int]  # (x, y, z, w)
+
 def in_bounds(c: Coord4) -> bool:
     x, y, z, w = c
     return 0 <= x < 16 and 0 <= y < 16 and 0 <= z < 8 and -8 <= w <= 8
 ```
 
-Chebyshev distance on the lattice:
+**Valence quantization** (the missing map):
+
+```python
+W = 8
+# good ≡ +1.0, bad ≡ -1.0  (CLI enums)
+def valence_to_w(v: float) -> int:
+    return max(-W, min(W, int(round(v * W))))
+# +1.0 → +8, -1.0 → -8, 0.0 → 0, 0.5 → 4
+```
+
+`+1.0` lands on \(w=+8\), which **is** Hilbert-encodable (K13: \(w'=16\) fits in 5 bits).
+
+Chebyshev distance on the lattice (Manhattan is rejected: a diagonal neighbor is one “look” in a palace):
 
 \[
 d_\infty(p,q) = \max_i |p_i - q_i|
@@ -213,6 +249,8 @@ B_{n,c} = \{ p \in \mathbb{R}^4 : n \cdot p = c \},\qquad \|n\|=1.
 
 v1: \(n = (0,0,0,1)\), \(c = w_{\text{agent}}\). The agent walks the 3D palace at a fixed valence slice. Objects with \(|w - c| > 0\) are *off-slice*; the snapshot may mention them as “above/below in valence” but does not inject their text until the agent `ascend`/`descend`s or `recall` includes them via the goal filter.
 
+Two objects at the same \((x,y,z)\) and different \(w\) have **different Hilbert keys** and **different blanket membership**. That is a PR-5 test, not a PR-7 afterthought.
+
 Extension (not v1 navigation, API exists): rotate \(n\) in one of the six 4D planes with a Givens rotation \(R_{ij}(\theta)\), \(\theta \in \{k\pi/8\}\). That tilts the blanket. Quaternions are **not** used for this (they act on \(\mathbb{R}^3\)).
 
 #### 2.3 4D → 3D projection
@@ -227,47 +265,52 @@ On an axis-aligned slice \(w=c\) this is a uniform scale, so the palace geometry
 
 When the blanket is tilted, project by dropping the coordinate along \(n\) after rotating \(n\) onto \(e_w\) with Givens.
 
-**Invariant (Math-Verify / sympy):** the scale identity \(\frac{d}{d-w}\cdot\frac{d-w}{d} = 1\) for all \(w \neq d\). The harness will `parse`/`verify` the closed form; the Python projector is tested against sympy’s exact Rational arithmetic.
+**Engineering test (not a 4D-index invariant):** Python projector vs sympy `Rational` on a grid of \(L_4\) points; round-trip on a slice. The algebraic tautology \(\frac{d}{d-w}\cdot\frac{d-w}{d}=1\) may be used as **Math-Verify harness smoke** only. It does not check the projector.
 
 #### 2.4 Hilbert and Morton keys
 
 Every occupied cell has a locality-preserving 1D key used as the packfile order and as a B-tree key.
 
-**Default: n-dimensional Hilbert curve, Skilling 2004** (“Programming the Hilbert curve”), \(n=4\), \(b=4\) bits per spatial axis and a signed map for \(w\): store \(w' = w + W\) so \(w' \in [0,16)\), then encode \((x,y,z,w')\) with 4 bits each → 16-bit Hilbert index (fits in `uint32`, leaving headroom for dim 5+).
+**The 4-bit cube cannot hold \(L_4\).** \(w=+8 \Rightarrow w'=16 \notin [0,16)\). v1 does not drop the best memories.
+
+**Injection into the unsigned 5-bit hypercube** \(H = [0,32)^4\):
+
+\[
+\iota(x,y,z,w) = (x,\, y,\, z,\, w+8), \qquad w+8 \in [0,16].
+\]
+
+\(x\in[0,16)\), \(y\in[0,16)\), \(z\in[0,8)\) sit in the low 4/3 bits of a 5-bit field; unused high bits are zero.
+
+**The on-disk coder (the only one):** n-dimensional Hilbert, Skilling 2004, **equal 5 bits per axis**, \(n=4\). Encode \(\iota(p)\in H\); key is 20 bits, stored in `uint32`. Decode: Skilling-inverse, then if the point is not in \(\iota(L_4)\) (e.g. \(z\ge 8\) or \(w'\ge 17\)) return error. Tests and pack order are on \(L_4\) only; unused cells of \(H\) are never produced by `encode`.
 
 ```text
-hilbert_encode_4d(x, y, z, w, bits=4) -> int
-hilbert_decode_4d(h, bits=4) -> (x, y, z, w)
+hilbert_encode_4d(x, y, z, w) -> int      # requires in_bounds; Skilling-5(ι(p))
+hilbert_decode_4d(h) -> Coord4 | error    # error if not in L_4
 ```
 
-**Morton (Z-order)** is the debug/fallback coder: bit interleave of the four axes. Worse locality, trivial invertibility, useful as a differential test.
+Mixed-width \((4,4,3,5)\) / compact Hilbert is **not** v1. It is a different algorithm (not Skilling) and a different numeric key. Do not ship two maps. Compact Hilbert may be a later pack-version bump (`4DM2`), not an “equivalent.”
 
-**Lean invariant (v1 success bar):** in `lean/FourDMem/Hilbert.lean`, for `bits = 4`:
+**Morton (Z-order)** is the debug/fallback coder: bit-interleave of the **same** 5-bit padded \(\iota(p)\). Worse locality, trivial invertibility, differential test against Hilbert. Morton keys are also 20-bit, not mixed-width.
+
+**Lean invariant (v1 success bar)** — **the same set Python encodes**, not `Fin 16^4`:
 
 ```lean
-theorem hilbert_encode_decode_id
-    (p : Fin 16 × Fin 16 × Fin 16 × Fin 16) :
-    decode (encode p) = p := by sorry -- replace with proof or `#eval` exhaustive check
+structure Lattice4 where
+  x : Fin 16
+  y : Fin 16
+  z : Fin 8
+  wShifted : Fin 17   -- 0..16; valence w = wShifted.val - 8
+
+def encode : Lattice4 → Nat
+def decode : Nat → Option Lattice4
+
+theorem hilbert_encode_decode_id (p : Lattice4) :
+    decode (encode p) = some p
 ```
 
-Because \(16^4 = 65536\), exhaustive `#eval` over the grid is a legitimate machine check in the REPL (seconds, not hours). We also prove invertibility of the bit-interleave Morton coder by `native_decide` / `rfl` on the bit operations. The Hilbert proof may start as exhaustive REPL evaluation plus a Lean wrapper theorem; a closed-form proof is welcome but not a v1 blocker if exhaustive check is wired through `fourdmem harness lean`.
+\(|L_4| = 34{,}816\). **Python exhaustive bijection on all 34,816 points is the engineering gate** (milliseconds). Lean: prove the theorem by `#eval` over `Lattice4` if it finishes inside the CI budget (measure in PR-3; do **not** promise 60s). If `#eval` is too slow, Lean proves Morton invertibility + Hilbert round-trip on a reduced **equal-width** `bits=2` Skilling toy (\([0,4)^4\)), and a lockstep test dumps 256 Python encode values for Lean `#eval`. Closed-form Skilling proof is welcome, not a v1 blocker. Tests must not require a second Hilbert implementation to agree on numeric keys.
 
-**Python property tests:** 10k random points, `decode(encode(p))=p`, `encode(decode(h))=h`; locality: for Chebyshev-1 neighbors, Hilbert distance is bounded in distribution (histogram logged, not a hard theorem).
-
-#### 2.5 Why this composition, not the other candidates
-
-| Candidate | Role in the winner | Why not the whole product |
-| --- | --- | --- |
-| Product quantization / OPQ / RQ | Internal descriptor compression + kNN placement hints | Not a palace; not 4D; not lossless |
-| Git CAS + pack/delta/zstd | Lossless object layer | Not spatial, not judgment, not navigation |
-| 4D Hilbert / Morton | Pack order + spatial keys | Not a UX; not language |
-| Method of loci | Primary navigation graph | Needs a real 4D backing store |
-| HDC / VSA | Name↔locus bind, room bundle, cleanup | 10k-D, not navigable |
-| Geometric algebra / tesseract projection | 4D→3D view + future blanket tilt | Not a store |
-| Goal-conditioned retrieval | Query-time gate | Ephemeral; cannot be the 4th axis |
-| Valence as 4th coordinate | **The 4th axis** | Needs the other layers to be usable |
-
-The winner is the **composition**, with Hilbert+lattice+blanket as the spatial core, git-CAS as the lossless core, loci as the UX, PQ as the index, goal-filter as the prompt shield, VSA as the naming layer.
+**Python property tests:** exhaustive `decode(encode(p))=p` on \(L_4\); `encode(decode(h))=h` for keys that decode; `encode` defined at \(w=+8\) and \(w=-8\); locality histogram for Chebyshev-1 neighbors (logged, not a hard theorem).
 
 ### 3. Quantizing context
 
@@ -285,9 +328,9 @@ sequenceDiagram
   S->>C: git-header + SHA-256 + zlib loose object
   S->>Q: simhash256 + ngram sketch64
   Q->>Q: PQ encode M=8 k=256
-  Q->>P: place: named locus or PQ-neighborhood or hash-to-cell
-  P->>P: set w from existing judgment or 0
-  P->>C: commit object (parents, coord, pq, valence, goal-at-store)
+  Q->>P: place Coord4: named locus or PQ-neighborhood or hash-to-cell
+  P->>P: w from existing judgment or 0
+  P->>C: commit object (parents, Coord4, pq, valence, goal-at-store)
   S-->>A: id, coord, landmark, tokens_if_recalled
 ```
 
@@ -298,65 +341,104 @@ Steps:
 3. **Git-style header + hash.**
    ```
    payload = f"{type} {len(data)}\0".encode() + data
-   oid = sha256(payload)
+   oid = sha256(payload)          # 32 raw bytes; hex for display
    ```
-   Loose path: `.fourdmem/objects/{oid[:2]}/{oid[2:]}` zlib level 6.
+   Loose path: `.fourdmem/objects/{oid_hex[:2]}/{oid_hex[2:]}` zlib level 6.
 4. **Simhash (256-bit).** Tokenize on `\w+`; each token hashed with SHA-256; weighted feature bits summed; sign → 256-bit Charikar fingerprint. Hamming distance is the lexical metric.
 5. **N-gram sketch (64 bytes).** 3-grams of lowercase letters hashed into 64 bytes (count-min, 1 row).
-6. **Product quantization.** Concatenate simhash-as-32-uint8 + sketch → 96-byte vector (or 96 floats). Split into \(M=8\) subvectors of 12 bytes. Each subspace: k-means \(k=256\) on a training reservoir (first 10k objects, then frozen until `fourdmem quant train`). Code = 8 bytes. Identity OPQ rotation \(R=I\) until an explicit train. Residual quantization is a v2 flag, not v1 default.
-7. **Placement.**
-   - If the agent passed `mnemonic="library"`, occupy that landmark’s \((x,y,z)\); \(w\) from judgment.
-   - Else find up to 8 PQ-nearest existing objects; majority-vote their cell; if empty enough, take it; else spiral in Hilbert order.
-   - Else `hash-to-cell`: `oid[0]%X, oid[1]%Y, oid[2]%Z`.
-8. **Language object.** If the atom is a name or mnemonic, also bind VSA vectors (section 8).
+6. **Product quantization.** Concatenate simhash-as-32-uint8 + sketch → 96-byte vector. Split into \(M=8\) subvectors of 12 bytes. Each subspace: k-means \(k=256\) on a training reservoir (first 10k objects, then frozen until `fourdmem quant train`). Code = 8 bytes. Identity OPQ rotation \(R=I\) until an explicit train. Residual quantization is a v2 flag, not v1 default.
+7. **Placement — always a `Coord4`.**
+   - If the agent passed `mnemonic="library"`, occupy that landmark’s \((x,y,z)\) and current (or judged) \(w\).
+   - Else find up to 8 PQ-nearest existing objects; majority-vote their `Coord4`; if that cell has `< 16` occupants, take it; else walk **forward on the Hilbert curve** (next keys, same \(w\) preferred) until a cell with room.
+   - Else `hash_to_cell(digest: bytes) -> Coord4` on the **raw 32-byte SHA-256**, not the hex string:
+     ```python
+     def hash_to_cell(digest: bytes) -> Coord4:
+         return (digest[0] % 16, digest[1] % 16, digest[2] % 8, 0)
+     ```
+     \(w=0\) until `judge`. Valence is never taken from the hash.
+8. **Language object.** If the atom is a name or mnemonic, also bind VSA vectors (section 8) — **after PR-10**. Before that, names are exact-match refs only.
 
 Quantization **never replaces** the blob. Recall of the original is always `cas.get(oid)`.
 
 ### 4. Goal-conditioned pertinence (the cats rule)
 
-Every prompt has a **goal**. The goal is an object (`type=goal`) and also the current `refs/goal`.
+Every prompt has a **goal**. The goal is an object (`type=goal`) and also the current `refs/goal`. `query_mode` (`neutral|prefer_good|prefer_bad`) lives **on the goal object**. It is not a lattice axis and must not be promoted onto \(w\).
+
+**v1 weights (PR-8, VSA stubbed):**
 
 ```text
 pertinence(goal, mem) =
-    0.40 * jaccard(tokens(goal.text), tokens(mem.text))
-  + 0.25 * (1 - hamming(goal.pq, mem.pq) / M)
-  + 0.20 * 1 / (1 + graph_dist(agent.pos, mem.locus))   # 3D palace graph
-  + 0.15 * vsa_score(goal.bind, mem.bind)               # [-1,1] mapped to [0,1]
+    0.47 * jaccard(tokens(goal.text), tokens(mem.text))
+  + 0.29 * (1 - hamming(goal.pq, mem.pq) / M)
+  + 0.24 * 1 / (1 + graph_dist(agent.pos, mem.locus))   # graph on Coord4
 ```
+
+These are \(0.40/0.25/0.20\) renormalized over \(0.85\) after dropping the 0.15 VSA term. `vsa_score = 0` until PR-10. After PR-10, restore \(0.40+0.25+0.20+0.15\) and keep the cats fixture green.
+
+**`look` vs `recall` (one rule):** both apply the same \(\tau\) (default \(0.35\)) and the same exclude/`not_pertinent` gates. `look` is the current cell only (radius 0), cap 256 tokens. `recall` is radius 1, cap 512. **Neither bypasses \(\tau\).** Walking into the cats cell and `look`ing *can* surface cats — that is navigation, not a leak. The cats **test** calls `recall` from `library`, not `look` at the distractor.
+
+**Path crumbs, not path occupants:** `recall` may append **path crumbs** (landmark name + oid of each vertex on the current stored path), never every occupant of those cells. Crumbs are titles+oids, still under the token cap.
 
 Recall **includes** `mem` iff:
 
-- `pertinence >= τ` (default `τ = 0.35`), **or**
-- `mem` lies on the current stored path, **or**
-- the agent explicitly `look`s at a cell (still truncated by token cap, but `look` is local),
+- `pertinence >= τ`, **or** `mem` is a **path crumb** of the current stored path,
 
 **and not** if:
 
 - `mem` is tagged `not_pertinent` for this goal, or
-- `goal.exclude` terms match and pertinence `< 0.50`.
+- `goal.exclude` terms match **and** pertinence `< 0.50`.
 
-**Cats example (v1 acceptance test).** Goal: `"prove Hilbert 4D encode/decode is bijective"`. Stored memories: the Hilbert note (pertinent) and `"I saw cats on screen"` (not pertinent). `recall` must return the Hilbert note and must not contain the string `cats` (case-insensitive). The cats blob **remains in CAS**. `fourdmem cas show <oid>` still reconstructs it. We offload; we do not delete.
+The primary cats test **does not set `exclude=["cats"]`**. Exclude-terms get a **second**, separate test.
+
+#### Frozen cats fixture (PR-8 / `tests/test_cats.py`)
+
+| Item | Placement |
+| --- | --- |
+| Goal text | `prove Hilbert 4D encode/decode is bijective` |
+| `goal.exclude` | **empty** |
+| Hilbert note blob | `Hilbert encode/decode is a bijection on Lattice4.\n` |
+| Hilbert title | `Hilbert bijection` |
+| Hilbert `Coord4` | `(3, 5, 1, 0)` landmark `library` |
+| Cats blob | `I saw cats on screen.\n` |
+| Cats title | `cats on screen` |
+| Cats `Coord4` | `(12, 2, 0, 0)` — **no landmark**, not on any stored path |
+| Agent spawn | `Coord4 (0, 0, 0, 0)` — default \(w=0\), unjudged |
+| Agent procedure | `go library` then `recall` (lands on `(3,5,1,0)`, same cell as Hilbert) |
+| Stored path | empty, or only vertices at `library` `(3,5,1,0)` |
+
+**What `recall` returns (bytes):** a UTF-8 block of lines `title <space> oid_hex` plus the **first line of the blob** (not the full blob). Example:
+
+```
+Hilbert bijection e3b0c4...
+Hilbert encode/decode is a bijection on Lattice4.
+```
+
+**Pass criterion:** recall text contains `Hilbert` and the Hilbert oid hex; does **not** contain `cats` (case-insensitive); cats oid is still in CAS (`cas.get` round-trips). Fail if the implementer “fixes” it with `exclude=["cats"]`.
+
+Full blobs are retrieved by `fourdmem cas show <oid>` (second tool call). That is the compression: the prompt holds titles, first lines, and oids.
 
 Valence modulates *which neighborhood* is walked, not whether cats pass the gate:
 
 - `query_mode=prefer_good`: search \((x,y,z)\) neighbors at \(w \in [w_{\text{agent}}, +W]\).
-- `query_mode=prefer_bad`: toward \(-W\) (failure memories).
+- `query_mode=prefer_bad`: toward \(-W\).
 - `query_mode=neutral` (default): \(w \in [w_{\text{agent}}-1, w_{\text{agent}}+1]\).
 
 Judgment without a goal still moves \(w\). Goal without judgment still filters. They compose; they are not the same axis.
 
 ### 5. Method of loci and movement grammar
 
-The 3D palace is a grid graph of **rooms** (cells) with optional **landmarks** (named rooms) and **paths** (stored walks).
+The palace is a grid graph of **rooms**. A room is a `Coord4`. Edges: 6-neighborhood in \((x,y,z)\) at **fixed \(w\)**, plus `ascend`/`descend` changing \(w\) by \(\pm 1\) at fixed \((x,y,z)\).
 
 ```text
 Room
-  coord3: (x,y,z)
-  landmark: Optional[str]      # unique in the palace
-  occupants: list[oid]         # all w; snapshot filters
-  exits: {n,s,e,w,up,down}     # missing at bounds
-  stairs_w: {ascend, descend}  # change valence, stay in (x,y,z)
+  coord: Coord4                 # NEVER Coord3
+  landmark: Optional[str]       # unique in the palace; names the (x,y,z) column
+  occupants: list[oid]          # objects whose Coord4 equals this cell
+  exits: {n,s,e,w,up,down}      # missing at bounds; stay at same w
+  stairs_w: {ascend, descend}   # change valence
 ```
+
+A landmark names an \((x,y,z)\) column. `go library` teleports to `(3,5,1,w_agent)` (same \(w\) the agent currently has). **`go` does not snap to an occupant’s \(w\).** Occupants at other \(w\) in that column are off-slice. Default spawn is \(w=0\); the cats/nav Hilbert note is therefore stored at `(3,5,1,0)`, not at \(w=2\). A snapshot example at \(w=2\) is a different scene (agent already `ascend`ed).
 
 Movement is **nearly instant**: no interpolation, no physics. Teleport to a landmark is a dict lookup.
 
@@ -364,46 +446,50 @@ Movement is **nearly instant**: no interpolation, no physics. Teleport to a land
 
 | Command | Effect |
 | --- | --- |
-| `go <landmark>` | Teleport to named locus; record path edge |
-| `step <n\|s\|e\|w\|up\|down>` | One cell; error at bounds |
-| `ascend` / `descend` | \(w \leftarrow w\pm 1\), clamped |
+| `go <landmark>` | Teleport to named \((x,y,z)\), keep \(w\); record path edge |
+| `step <n\|s\|e\|w\|up\|down>` | One cell in 3D, same \(w\); error at bounds |
+| `ascend` / `descend` | \(w \leftarrow w\pm 1\), clamped to \([-8,+8]\) |
 | `slice w=<int>` | Set blanket \(c\) |
 | `follow <path>` | Replay a stored path, snapshot at the end |
-| `look` | Describe current cell + r=0 occupants (goal-filtered), ≤256 tokens |
+| `look` | Current cell, same \(\tau\) as recall, ≤256 tokens |
 | `recall [radius=1]` | Neighborhood slice, ≤512 tokens, goal-filtered |
-| `mark <name>` | Set landmark on current cell |
-| `note <text>` | Store blob at current locus, \(w\) unchanged |
-| `store <text> [mnemonic=]` | Store and optionally place at a landmark |
-| `judge <oid\|here> <good\|bad\|[-1,1]> [reason]` | Write `judgment`, move \(w\) |
+| `mark <name>` | Set landmark on current \((x,y,z)\) |
+| `note <text>` | Store blob at **current `Coord4`** |
+| `store <text> [mnemonic=]` | Store and optionally place at a landmark’s \((x,y,z)\), \(w\) current |
+| `judge <oid\|here> <good\|bad\|[-1,1]> [reason]` | Write `judgment`, set \(w=\mathrm{clamp}(\mathrm{round}(v W),-W,W)\) |
 | `path save <name>` | Commit the current uncommitted walk as a `path` object |
 
 **Paths are memory.** A `path` object stores the sequence of `Coord4`, the goal-at-walk, and timestamps. Recurring walks with the same landmark sequence increment `echo_count` on that path. `follow` is recall by route.
+
+**PR-5 invariant test:** two blobs at `(3,5,1,+2)` and `(3,5,1,-2)` have different Hilbert keys, different blanket membership at \(c=+2\), and both exist as occupants of different rooms.
 
 The engine snapshot after every move is the tool result. The agent does not need a window.
 
 ### 6. Tiny engine (3D projection of 4D)
 
-Process: `fourdmem engine [--window]`. Headless is default.
+Process: `fourdmem engine [--window] [--port 4747]`. Headless is default.
 
-- Protocol: JSON-RPC over TCP `127.0.0.1:4747` (Windows-friendly; also `--stdio`).
+- Protocol: JSON-RPC over TCP `127.0.0.1`. Default port **4747**. If 4747 is taken and `--port` was not an explicit exclusive bind, try 4748–4757 and print the bound port on stdout. `--port 0` = ephemeral. If `--port 4747` was explicit and taken: exit 2. Localhost only; no auth (v1).
 - State: current `Coord4`, blanket \((n,c)\), last snapshot.
-- Snapshot schema (always returned, also printed as ASCII for CLI):
+- Snapshot schema:
 
 ```json
 {
-  "coord": {"x": 3, "y": 5, "z": 1, "w": 2},
+  "coord": {"x": 3, "y": 5, "z": 1, "w": 0},
   "landmark": "library",
-  "slice": "w=2",
+  "slice": "w=0",
   "visible": [
-    {"cell": [3,5,1], "label": "library", "oids": ["ab..."], "titles": ["Hilbert bijection"]}
+    {"cell": [3, 5, 1, 0], "label": "library", "oids": ["ab..."], "titles": ["Hilbert bijection"]}
   ],
-  "off_slice": [{"cell": [3,5,1], "w": -2, "hint": "bad: failed Lean proof"}],
+  "off_slice": [{"cell": [3, 5, 1, 2], "w": 2, "hint": "judged good; ascend to see"}],
   "exits": ["n", "e", "ascend", "descend"],
   "tokens_if_recall": 180
 }
 ```
 
-**Window mode (optional, later PR):** immediate-mode wire cubes, one color per valence band, text labels, no lighting, no textures, no shadows. Click = `go`. This is explicitly not a product surface; the agent uses snapshots.
+`cell` is **four** integers. `off_slice` entries are other \(w\) in the same \((x,y,z)\) column.
+
+**Window mode (optional, PR-14):** immediate-mode wire cubes, one color per valence band, text labels, no lighting, no textures, no shadows. Click = `go`. Not a product surface.
 
 Tick model: **event-driven**. No 60 fps loop unless a window is open. Headless move is a function call.
 
@@ -413,15 +499,17 @@ Tick model: **event-driven**. No 60 fps loop unless a window is open. Headless m
 
 ```text
 blob        canonical note bytes
-tree        a room: sorted list of (name, oid, coord4)
-commit      a store event: tree, parents, goal, valence, timestamp, agent
+tree        a room: sorted list of (name, oid, Coord4)
+commit      a store event: tree, parents, goal, valence, Coord4, timestamp, agent
 principle   statement, weight, evidence oids, echo_count
 path        sequence of Coord4, landmark names, goal-at-walk
-mnemonic    landmark name, coord3, vsa vector id
+mnemonic    landmark name, coord3 column (x,y,z), vsa vector id (after PR-10)
 goal        text, exclude terms, τ override, query_mode
 judgment    target oid, valence in [-1,1], quantized w, reason, timestamp
 lang        first-class language: kind in {note, name, mnemonic, principle_statement}
 ```
+
+Types are **dataclasses** (stdlib). No pydantic.
 
 Header: `{type} {size}\0` + canonical JSON (sorted keys, UTF-8, no insignificant whitespace) except `blob` which is raw bytes.
 
@@ -430,7 +518,7 @@ Header: `{type} {size}\0` + canonical JSON (sorted keys, UTF-8, no insignificant
 ```text
 .fourdmem/
   HEAD                    # current Coord4 + oid of last commit
-  config.toml             # lattice bounds, τ, token caps, toolchain paths
+  config.toml             # lattice bounds, τ, token caps; no machine-local elan path
   objects/ab/cd..         # loose zlib
   pack/
     pack-{sha}.pack
@@ -441,29 +529,87 @@ Header: `{type} {size}\0` + canonical JSON (sorted keys, UTF-8, no insignificant
     paths/{name}
     mnemonics/{name}
   index/
-    hilbert.idx           # hkey -> [oid]
-    pq.idx                # 8-byte codes + oid (memory-mapped)
-    names.fts             # sqlite FTS5 for language objects (stdlib+sqlite3)
+    hilbert.idx           # see §7.4
+    pq.idx
   palace/
     loci.json             # graph (regenerable from trees; cached)
   logs/
     events.jsonl
 ```
 
-Store root: `{cwd}/.fourdmem` (project-scoped, like Headroom’s `{cwd}/.headroom/memory.db`). Override `--store`.
+No `names.fts` in v1. `go` is exact landmark match, then VSA cleanup after PR-10. Store root: `{cwd}/.fourdmem`. Override `--store`.
 
-#### 7.3 Pack / delta / zstd
+#### 7.3 Pack / delta / zstd (`4DM1`)
 
-`fourdmem gc`:
+Little-endian. zstd encodings require extra `[pack]` (`zstandard>=0.23`). v1 `gc` without that extra writes `full-zlib` / `ref-delta-zlib` only.
 
-1. List all oids, look up Hilbert keys (unplaced objects sort last).
-2. Sort by Hilbert key (locality → similar bytes nearby → better deltas).
-3. For each object, try copy/insert delta against the previous 4 objects in this order (git window=4 analogue). Keep delta if `len(delta) < 0.8 * len(zlib(full))`.
-4. Write pack: magic `4DM1`, version 1, count; per object: type nibble + size varint + encoding (`full-zlib` | `full-zstd` | `ref-delta-zstd`); then payload.
-5. Write idx: 256-byte fanout on first hash byte, then sorted oids, CRC32C, offsets.
-6. Delete loose objects that are in a pack.
+```text
+pack-{sha}.pack
+  magic[4]     = b"4DM1"
+  version      = uint32 1
+  count        = uint32
+  objects[count]:
+    # git-style size/type nibble:
+    #   bits[7:4] type: 1=blob 2=tree 3=commit 4=principle
+    #                 5=path 6=mnemonic 7=goal 8=judgment 9=lang
+    #   bits[3:0] size low nibble; continuation bytes with high-bit like git
+    encoding   = uint8  0=full-zlib  1=full-zstd  2=ref-delta-zlib  3=ref-delta-zstd
+    if encoding in {2,3}:
+      base_oid = 32 bytes SHA-256     # REF_DELTA only; no OFS_DELTA in v1
+    payload    = compressed full object or compressed delta
 
-v1 adds `zstandard` to the venv. zlib remains for loose objects (git-like, no extra dep on the write path).
+delta (after decompress), git copy/insert:
+  source_size  uleb128
+  target_size  uleb128
+  ops:
+    byte==0                invalid
+    byte < 0x80            INSERT: next `byte` bytes literal
+    byte >= 0x80           COPY: git opcode
+      offset/size assembled from following 0–7 bytes exactly as git
+      (opcode bits 0x01,0x02,0x04,0x08 → offset; 0x10,0x20,0x40 → size;
+       size==0 means 0x10000)
+```
+
+**Base selection:** Hilbert-sort objects. For each object, try REF_DELTA against the previous 1..4 objects **of the same type**. Keep the shortest delta if `len(compressed_delta) < 0.8 * len(zlib(full))`.
+
+```text
+pack-{sha}.idx
+  magic[4]     = b"4DI1"
+  version      = uint32 1
+  fanout[256]  = uint32 BE cumulative counts by first oid byte (git-like)
+  oids         = count × 32 bytes, sorted
+  crc32        = count × uint32 BE, zlib.crc32 of that PackedObject’s on-disk bytes
+                 (IEEE CRC-32, polynomial 0xEDB88320; NOT CRC32C)
+  offsets      = count × uint64 LE
+```
+
+**`gc` crash order:** write `pack-{sha}.pack.tmp` + `idx.tmp` → fsync both → rename pack then idx → **then** delete packed loose objects. No “keep last N loose” after a successful rename; tmp+rename is the safety.
+
+#### 7.4 Indexes (rebuilt, never appended)
+
+`fourdmem gc` and `fourdmem reindex` **rebuild** both files from CAS.
+
+```text
+hilbert.idx
+  magic b"4DH1"
+  version uint32 1
+  count   uint32
+  records sorted by (key, oid):
+    key  uint64 LE     # Hilbert key
+    oid  32 bytes
+
+pq.idx
+  magic b"4DP1"
+  version uint32 1
+  M uint8              # 8
+  k uint16 LE          # 256
+  subdim uint8         # 12
+  codebook: M * k * 12 raw bytes
+  count uint32
+  records:
+    code 8 bytes
+    oid  32 bytes
+```
 
 **Round-trip invariant:** `cas.get(oid) == original_bytes` for loose and packed, full and delta.
 
@@ -472,13 +618,15 @@ v1 adds `zstandard` to the venv. zlib remains for loose objects (git-like, no ex
 A `lang` object is stored in CAS like any other. Additionally:
 
 - **Names** are unique in a palace (`refs/mnemonics/{name}`).
-- **HDC:** D=8192, bipolar \(\{\pm 1\}\), seed from `blake2b(name)`.
-  - Bind: componentwise multiply. `name ⊙ locus_vec`.
+- **HDC (PR-10):** \(D=8192\), bipolar \(\{\pm 1\}\).
+  - `name_vec(name) = bipolar_from_blake2b(b"name:" + name.encode(), D)`
+  - `locus_vec(coord: Coord4) = bipolar_from_blake2b(b"locus:" + struct.pack("<4i", *coord), D)` — deterministic from the tuple, not a table of random cell vectors.
+  - Bind: componentwise multiply. `name_vec ⊙ locus_vec`.
   - Bundle: signed sum + sign. A room is the bundle of its occupant binds.
-  - Cleanup: item memory (dict name → vector); probe by cosine; winner if cosine ≥ 0.15.
-- `go <name>` uses cleanup if the string is not an exact landmark (typos, paraphrases). Exact match wins first.
+  - Cleanup: item memory (dict name → vector); probe by cosine; winner if cosine ≥ 0.15. Random cosine is \(\sim 1/\sqrt{D} \approx 0.011\); 0.15 is a heuristic, tested in PR-10, not a theorem.
+- `go <name>` uses cleanup if the string is not an exact landmark. Exact match wins first.
 
-This is the only role VSA plays. It does not define coordinates.
+This is the only role VSA plays. It does not define coordinates. It does not participate in pertinence until PR-10 restores the 0.15 term.
 
 ### 9. Principles and the echo loop
 
@@ -487,7 +635,8 @@ Philosophical constraint, encoded as data, not as a persona:
 > The system is the organization of itself. Echo/becoming is the learning loop. Principles persist. The store reorganizes. The agent is not pretending to be a person.
 
 ```python
-class Principle(BaseModel):
+@dataclass
+class Principle:
     oid: str
     statement: str
     mnemonic: str | None
@@ -498,58 +647,59 @@ class Principle(BaseModel):
     reinforced_at: datetime
 ```
 
-`refs/principles` points at a `tree` of principle oids (a bundle). The VSA bundle of principle statements is the “identity” vector of the store.
+`refs/principles` points at a `tree` of principle oids.
 
-**Echo loop** (`fourdmem reorganize`, also auto every 64 `store`/`judge` events):
+**Split verbs:**
 
-1. Cluster occupants by PQ code + \(w\) band.
-2. If a cluster has ≥3 judgments with the same sign, mint or reinforce a principle from the majority reason texts (the *agent* writes the statement via a required `--statement` or a stored template; v1 does **not** call an LLM inside `reorganize` — no hidden model).
-3. Optionally emit a summary `blob` whose parents are the cluster oids (git-commit analogue). Originals stay.
-4. Unnamed occupants may move at most 1 Chebyshev step toward the cluster’s median cell. **Landmarks never move.**
-5. Increment `echo_count` on touched principles and paths.
-6. Append an event to `logs/events.jsonl`. Never touch conversation history.
+| Verb | When | What it does |
+| --- | --- | --- |
+| `fourdmem reorganize` | manual, or auto every 64 `store`/`judge` events | cluster; unnamed occupants move ≤1 Chebyshev step toward cluster median; landmarks **never** move; increment `echo_count`; log event. **Does not mint principles.** |
+| `fourdmem principle assert --statement "..."` | agent-authored only | mint or reinforce. v1 does **not** call an LLM inside reorganize. |
 
-Dimension 6 (later) *reads* principle-alignment as a coordinate. v1 only stores the field that will become that coordinate (`principle_score` on each commit, computed as Jaccard against the principle bundle, cached).
+Dimension 6 (later) *reads* principle-alignment as a coordinate. v1 caches `principle_score` on each commit (Jaccard against the principle bundle).
 
 ### 10. Dimensions 5 / 6 / 7 (explicit extension points)
 
 v1 code must use `LatticeND` with `n=4` default. Hilbert, Morton, pack order, and `Coord` are parameterized by `n`.
 
-| Dim | Axis | Mathematical object | Navigation verb | When it becomes live |
+| Dim | Axis | Mathematical object | Navigation verb | When |
 | --- | --- | --- | --- | --- |
 | 4 | \(w\) valence | signed integer, lattice coord | `ascend`/`descend`/`judge` | **v1** |
-| 5 | \(t\) epoch | \(t = \lfloor \log_2(1 + now - created)\rfloor\) or discrete session index, extra Hilbert dim | `earlier`/`later` | v2 |
-| 6 | \(p\) principle-alignment | \(p = \mathrm{quantize}(\mathrm{sim}(obj, P_t))\) where \(P_t\) is the current principle bundle; **derived**, recomputed on echo | `align` | v3 |
-| 7 | \(e\) echo/becoming | \(e = \mathrm{echo\_count}\) (or log), centrality of the object in the store’s own organization | `become` | v4 |
+| 5 | \(t\) epoch | **discrete session index** (monotonic integer, stable under clock skew) | `earlier`/`later` | v2 |
+| 6 | \(p\) principle-alignment | \(p = \mathrm{quantize}(\mathrm{sim}(obj, P_t))\); **derived**, recomputed on echo | `align` | v3 |
+| 7 | \(e\) echo/becoming | \(e = \mathrm{echo\_count}\) (or log) | `become` | v4 |
 
-Hilbert-n (Skilling) already takes `n`. Pack sort key becomes n-D Hilbert. The engine **always** projects a 3-flat: extra axes are selected by `slice` (`fourdmem slice t=3` in 5D, etc.). The blanket formula \(n\cdot p = c\) is dimension-agnostic: in 5D the blanket is still a 3-flat (two constraints), so v2 must pick which two axes are constrained (default: \(w=c_w\), \(t=c_t\)).
+**Not a v2 default:** \(t = \lfloor\log_2(1+\Delta t)\rfloor\). That is the same class of bug as putting goal on an axis: a derived, time-varying coordinate that would move objects. Session index does not move a landmark when the clock ticks.
+
+Hilbert-n (Skilling) already takes `n`. The engine **always** projects a 3-flat. Extra axes are selected by `slice`. In 5D the blanket is still a 3-flat (two constraints); default \(w=c_w\), \(t=c_t\).
 
 Do not invent a “7D metaphor.” If an axis cannot be written as a coordinate plus a Hilbert extension plus a slice rule, it does not ship.
 
 ### 11. Attaching the harness to an agent
 
-Three equivalent surfaces, one core (`fourdmem.api.Store`).
+Three equivalent surfaces, one core (`fourdmem.api.Store`). CLI is argparse.
 
-#### 11.1 CLI (works with mini-swe-agent bash loop)
+#### 11.1 CLI
 
 ```text
+fourdmem status
 fourdmem note "..."
 fourdmem store "..." --mnemonic library
 fourdmem judge here good --reason "Lean proof passed"
 fourdmem go library
 fourdmem step n
-fourdmem recall --goal "prove Hilbert bijection"
+fourdmem recall --goal "prove Hilbert 4D encode/decode is bijective"
 fourdmem look
 fourdmem harness math-verify --gold "1/2" --answer "0.5"
 fourdmem harness lean --cmd "def f := 2"
-fourdmem harness mini-swe --task "..."
+fourdmem harness mini-swe --task "..."     # optional; POSIX-first
 ```
 
-mini-swe-agent (`DefaultAgent`, `environments/local.py`) executes **one bash command per step** via `subprocess`. CLI is the native attachment for coding work on this repo. Trajectories stay linear (`agents/default.py`).
+Palace verbs land in PRs 2–8 by extending `src/fourdmem/cli.py`. Do not switch the CLI to Typer.
 
 #### 11.2 MCP (Grok / any MCP client)
 
-Stdio server `fourdmem mcp`. Tools always registered (Headroom lesson: do not flip the tools array):
+Stdio server `fourdmem mcp` (PR-12). Tools always registered:
 
 `note`, `store`, `judge`, `go`, `step`, `follow`, `look`, `recall`, `ascend`, `descend`, `slice`, `mark`, `principle_assert`, `principle_list`, `harness_math_verify`, `harness_lean`, `harness_mini_swe`.
 
@@ -570,11 +720,9 @@ FORBIDDEN
   - mutate bytes the provider may have prefix-cached
 ```
 
-This is the Headroom live-zone / CCR lesson applied to memory: the palace is CCR with spatial keys. `recall` is `ccr_retrieve`. The oid is the hash. The original is always in CAS.
-
 ### 12. Vendor harness wiring (implementation-grade)
 
-All under `src/fourdmem/harness/`. PR-1 ships these before palace code.
+All under `src/fourdmem/harness/`. PR-1 ships these **on the existing package**.
 
 #### 12.1 Math-Verify
 
@@ -590,50 +738,40 @@ def math_verify(gold: str, answer: str, *, windows_safe: bool = True) -> dict:
     return {"ok": ok, "gold_parsed": str(g), "answer_parsed": str(a)}
 ```
 
-Used to check projection identities and numeric Hilbert fixtures (e.g. gold `65536` vs computed grid size \(16^4\)).
+PR-1 smoke: a pair `verify` accepts (exact fractions, not the tautology). `verify` is non-symmetric; gold first.
 
-#### 12.2 Lean REPL
+#### 12.2 Lean REPL and project proofs (K10)
 
-```python
-# src/fourdmem/harness/lean_repl.py
-# Spawns: ELAN_HOME=C:\Users\coled\scoop\persist\elan\.elan
-#         lake exe repl   (cwd = vendor/math/lean-repl with toolchain override)
-#
-# Protocol (REPL/Main.lean): JSON commands separated by blank lines.
-# {"cmd": "def f := 2"} -> {"env": n, "messages": [...], "sorries": [...]}
-# {"cmd": "theorem ...", "env": n}
-# {"tactic": "rfl", "proofState": n}
-```
+Two packages. Do not compile the REPL with 4.33.1.
 
-Project file `lean/lean-toolchain`:
+**REPL (PR-1 gate):** cwd = `vendor/math/lean-repl` (after bootstrap). Lake reads **that directory’s** `lean-toolchain` (`v4.34.0-rc2`). Spawn `lake exe repl`. JSON commands separated by blank lines. Smoke: `{"cmd":"def f := 2"}` returns an `env`. Requires elan to have `leanprover/lean4:v4.34.0-rc2` installed (CI recipe in PR-13; locally `elan toolchain install leanprover/lean4:v4.34.0-rc2`).
 
-```text
-leanprover/lean4:v4.33.1
-```
+**Project proofs (PR-3):** `lean/FourDMem` is a separate Lake package. `lean/lean-toolchain` contains `leanprover/lean4:v4.33.1`. `lake build` in `lean/`. Never import those `.olean` files into the 4.34 REPL.
 
-Wrapper writes a one-line override or passes `--toolchain leanprover/lean4:v4.33.1` via elan so we do not build the vendor clone against 4.34.0-rc2 by accident.
+**Discover elan** (`src/fourdmem/harness/elan.py`):
 
-v1 Lean payload: `lean/FourDMem/Hilbert.lean` (encode/decode) and `lean/FourDMem/Projection.lean` (`d / (d - w)` inverse).
+1. `os.environ["ELAN_HOME"]` if set
+2. `shutil.which("elan")` / `which("lake")`
+3. `Path.home() / ".elan"`
+4. last-resort Windows: `%USERPROFILE%\scoop\persist\elan\.elan` if it exists — **log a warning**, do not write it into committed `config.toml`
 
-#### 12.3 mini-swe-agent
+`elan` is often not on PATH on Windows. Document that in README. Put Cole’s scoop path only in a **gitignored** `.fourdmem/config.toml` example, never in Key Decisions.
 
-```python
-# src/fourdmem/harness/mini_swe.py
-# Wraps minisweagent.agents.default.DefaultAgent
-# + LitellmModel + LocalEnvironment
-# config from vendor/coding/mini-swe-agent/src/minisweagent/config/default.yaml
-# cwd forced to repo root. Trajectory saved under .fourdmem/logs/mini-swe/
-```
+#### 12.3 mini-swe-agent (POSIX-first, not the only path)
 
-This is how coding work on *this* repo is supposed to run: `fourdmem harness mini-swe --task "implement Hilbert encode/decode"`.
+Vendor `DefaultAgent.run(task)` and `LocalEnvironment` exist as claimed. Config `default.yaml` requires **exactly one bash code block per step**. On Windows, `subprocess.Popen(..., shell=True)` is **cmd.exe**, not bash. The `bash` on PATH here is the WSL stub. Git bash at `C:\Program Files\Git\bin\bash.exe` is not wired.
+
+**PR-1 smoke:** `import minisweagent` (version 2.4.6) and construct `DefaultAgent` with a **fake model** (no API key). Optional: if `FOURDMEM_GIT_BASH` or Git bash is present, force `LocalEnvironment` to that bash.
+
+**Not a CI gate for PRs 2–11:** “implement this feature through mini-swe.” That needs LiteLLM + a key and a POSIX shell. Coding work on this repo uses ordinary pytest + the fourdmem CLI. mini-swe is a harness we *expose*, not the only legal editor.
 
 #### 12.4 lm-eval
 
-A task yaml under `evals/lm-eval/fourdmem_invariants.yaml` that treats the Python Hilbert/PQ functions as a “model” emitting answers, scored by Math-Verify where the answer is numeric/symbolic, and by exact match otherwise. Wired in a later PR; PR-1 only exposes `fourdmem harness lm-eval --list`.
+PR-1: `fourdmem harness lm-eval --list` if the clone exists, else a skip message. Task yaml runs in PR-13.
 
 ### 13. Token budget
 
-`src/fourdmem/budget.py` uses `tiktoken.get_encoding("cl100k_base")` (venv has 0.14.0).
+`src/fourdmem/budget.py` uses `tiktoken.get_encoding("cl100k_base")`.
 
 | Stream | Default | Hard cap |
 | --- | --- | --- |
@@ -641,13 +779,13 @@ A task yaml under `evals/lm-eval/fourdmem_invariants.yaml` that treats the Pytho
 | `look` | 256 | 512 |
 | engine snapshot | 128 | 256 |
 
-Packing order into the recall slice: current cell titles → path crumbs (landmark names only) → neighbors by pertinence desc → stop before cap. Never include full blobs if a 1-line title + oid exists; the agent `cas show`s if it needs lossless text (second tool call). That is the compression: **the prompt holds names and oids; the palace holds bytes.**
+Packing order: current cell title+oid+first-line → path crumbs → neighbors by pertinence desc → stop before cap.
 
 Metrics on every `recall`: `tokens_in`, `tokens_out`, `tokens_budget`, `dropped_non_pertinent`, `dropped_over_budget`.
 
 ### 14. Performance and scale targets
 
-| Operation | Target (10k objects, cold disk warm index) |
+| Operation | Target (10k objects, warm index) |
 | --- | --- |
 | `store` 2 KB note | < 5 ms |
 | `go` landmark | < 1 ms |
@@ -655,63 +793,67 @@ Metrics on every `recall`: `tokens_in`, `tokens_out`, `tokens_budget`, `dropped_
 | `cas.get` loose | < 2 ms |
 | `gc` 10k objects | < 2 s background |
 | engine snapshot | < 5 ms |
-| Lean Hilbert exhaustive 16^4 | < 60 s (once per CI) |
+| Python Hilbert exhaustive 34,816 | milliseconds (PR-3 measures Lean `#eval`) |
 
-Storage at 10k × 2 KB: ~20 MB raw, ~10 MB zlib loose, ~3–6 MB packed. Indexes < 1 MB. Trivial on disk.
+Storage at 10k × 2 KB: ~20 MB raw, ~10 MB zlib loose, ~3–6 MB packed. Indexes < 1 MB.
 
-100k objects is the v1 design ceiling (still in-process numpy PQ scan). Beyond that: mmap the PQ index and add an IVF list — not v1.
+100k objects is the v1 design ceiling (in-process numpy PQ scan).
 
-### 15. Repository layout (to be created)
+### 15. Repository layout
+
+Already present: `pyproject.toml` (hatchling), `src/fourdmem/{__init__,cli}.py`, `docs/`, `scripts/bootstrap-harnesses.ps1`, `THIRD_PARTY.md`.
+
+To be created by the PR plan (do not invent a second build story):
 
 ```text
-C:\Users\coled\Projects\4d-memory\
-  pyproject.toml
-  README.md
-  docs\DESIGN.md                  # this file
-  src\fourdmem\
-    __init__.py
-    cli.py
-    api.py                        # Store facade
-    budget.py
-    store\{cas.py, pack.py, types.py, refs.py}
-    quant\{simhash.py, pq.py, hilbert.py, morton.py}
-    space\{lattice.py, project.py, givens.py}
-    palace\{graph.py, paths.py, engine.py, snapshot.py}
-    retrieve\{goal.py, valence.py, recall.py}
-    principles\{model.py, echo.py}
-    vsa\{hdc.py}
-    harness\{math_verify.py, lean_repl.py, mini_swe.py, lm_eval.py}
-    agent\{mcp.py, tools.py, live_zone.py}
-  lean\lean-toolchain             # leanprover/lean4:v4.33.1
-  lean\FourDMem\{Hilbert.lean, Projection.lean, Lakefile}
-  evals\{cats_distractor.yaml, roundtrip.yaml, lm-eval\...}
-  tests\{test_cas.py, test_hilbert.py, test_cats.py, test_budget.py, test_harness.py, ...}
-  vendor\                         # already present; do not modify in feature PRs
+src/fourdmem/
+  harness/{math_verify.py, lean_repl.py, mini_swe.py, lm_eval.py, elan.py}
+  store/{cas.py, pack.py, types.py, refs.py}
+  quant/{simhash.py, pq.py, hilbert.py, morton.py}
+  space/{lattice.py, project.py, givens.py}
+  palace/{graph.py, paths.py, engine.py, snapshot.py}
+  retrieve/{goal.py, valence.py, recall.py}
+  principles/{model.py, echo.py}
+  vsa/{hdc.py}
+  agent/{mcp.py, tools.py, live_zone.py}
+  budget.py
+  api.py
+lean/lean-toolchain                 # leanprover/lean4:v4.33.1
+lean/lakefile.toml
+lean/FourDMem/{Hilbert.lean, Projection.lean}
+evals/{cats_distractor.yaml, roundtrip.yaml}
+tests/{test_harness.py, test_cas.py, test_hilbert.py, test_cats.py, ...}
+.github/workflows/eval.yml          # PR-13
+vendor/                             # gitignored; bootstrap only
 ```
 
 ---
 
 ## API / Interface Changes
 
-There is no prior product API. This section is the v1 surface.
+There is a stub CLI today (`fourdmem status`). Palace verbs extend it.
 
 ### Python
 
 ```python
 from fourdmem.api import Store
 
-s = Store.open(".fourdmem")          # or Store.open_default()
-s.set_goal("prove Hilbert bijection", exclude=["cats"])
-oid = s.store("Hilbert encode/decode is a bijection on Fin 16^4", mnemonic="library")
-s.judge(oid, +1.0, reason="checked by Lean exhaustive")
-s.go("library")
+s = Store.open(".fourdmem")          # agent spawn w = 0
+s.set_goal("prove Hilbert 4D encode/decode is bijective")  # no exclude on the primary path
+oid = s.store("Hilbert encode/decode is a bijection on Lattice4.", mnemonic="library")
+# store places at library (3,5,1) and current w=0 — same cell go/recall will use
+s.go("library")                      # (3,5,1,0); does not snap to any other occupant's w
 slice_ = s.recall()                  # RecallSlice(text, oids, tokens, dropped)
 blob = s.cas.get(oid)                # original bytes
+# judge after recall: moves the object on w; a later recall from w=0 would miss it unless you ascend
+s.judge(oid, +1.0, reason="checked by Lean exhaustive")  # w = +8, Hilbert-legal, off this slice
 ```
+
+A **second** API test may pass `exclude=["cats"]` to prove the exclude clause; that is not the cats fixture.
 
 ### CLI
 
-`fourdmem` Typer app (venv already has `typer` via mini-swe-agent). Subcommands match the movement grammar plus `harness`, `gc`, `engine`, `mcp`, `cas show`.
+argparse subcommands matching the movement grammar plus `harness`, `gc`, `reindex`, `engine`, `mcp`, `cas show`, `status`.
 
 ### MCP tools (JSON Schema sketch)
 
@@ -746,8 +888,6 @@ blob = s.cas.get(oid)                # original bytes
 }
 ```
 
-Harness tools take strings and return `{ok, output}` JSON. They never stream model tokens into the palace unless the caller `store`s them.
-
 ### Engine RPC
 
 ```text
@@ -759,7 +899,7 @@ Harness tools take strings and return `{ok, output}` JSON. They never stream mod
 
 ## Data Model Changes
 
-Greenfield. Canonical JSON examples:
+Greenfield except the argparse stub. Canonical JSON examples:
 
 **commit**
 
@@ -769,11 +909,12 @@ Greenfield. Canonical JSON examples:
   "tree": "sha256...",
   "parents": ["sha256..."],
   "blob": "sha256...",
-  "coord": [3, 5, 1, 2],
+  "coord": [3, 5, 1, 0],
   "pq": "base64-8-bytes",
   "simhash": "hex-64",
   "goal": "sha256...",
-  "valence": 0.75,
+  "valence": 0.0,
+  "w": 0,
   "principle_score": 0.4,
   "echo_count": 0,
   "created_at": "2026-09-06T00:00:00Z"
@@ -793,13 +934,15 @@ Greenfield. Canonical JSON examples:
 }
 ```
 
+`w: 8` is `clamp(round(1.0 * 8), -8, 8)` and **is** a legal Hilbert cell (\(w'=16\)).
+
 **path**
 
 ```json
 {
   "type": "path",
   "name": "library-to-proof-room",
-  "coords": [[3,5,1,2],[3,6,1,2],[4,6,1,3]],
+  "coords": [[3,5,1,0],[3,6,1,0],[4,6,1,0]],
   "landmarks": ["library", null, "proof-room"],
   "goal": "sha256...",
   "echo_count": 1
@@ -821,7 +964,7 @@ Greenfield. Canonical JSON examples:
 
 ### Migration
 
-v1: if `config.toml` lattice bounds change, rebuild Hilbert index (`fourdmem reindex`). Objects do not move unless `reorganize`. No on-disk version yet beyond pack magic `4DM1`. When n-D lands, `config.n` and a new pack magic `4DM2`; old packs remain readable.
+v1: if `config.toml` lattice bounds change, `fourdmem reindex` (PR-3 ships the command as a stub that rebuilds Hilbert; PR-11 hooks packs). Objects do not move unless `reorganize`. Pack magic `4DM1`. When n-D lands, `config.n` and pack magic `4DM2`; old packs remain readable.
 
 ---
 
@@ -830,44 +973,68 @@ v1: if `config.toml` lattice bounds change, rebuild Hilbert index (`fourdmem rei
 ### A1. Vector DB as the product (Chroma / FAISS kNN UX)
 
 - **Pros:** fast to ship a demo; familiar RAG.
-- **Cons:** operator explicitly rejected this as the primary UX; no palace, no 4D, no judgment axis, no paths-as-memory; becomes generic.
+- **Cons:** operator explicitly rejected this as the primary UX; no palace, no 4D, no judgment axis, no paths-as-memory.
 - **Verdict:** reject as UX. Keep PQ kNN as an internal index.
 
 ### A2. Goal as the 4th coordinate
 
 - **Pros:** matches a literal reading of “remember what is pertinent.”
 - **Cons:** goals are per-prompt; the palace would thrash; landmarks would not stay put; “good vs bad” would have no axis.
-- **Verdict:** reject. Goal is a query-time filter. Valence is \(w\).
+- **Verdict:** reject. Goal is a query-time filter. Valence is \(w\). Same class of bug: log-time as axis 5.
 
 ### A3. Unity / Godot palace
 
 - **Pros:** prettier 3D; Cole has engines locally.
-- **Cons:** product is a memory harness; lighting/assets/scene graphs are scope cancer; agent does not need a GPU window; Headless+JSON is the real interface.
-- **Verdict:** reject for v1. Optional wireframe window in-process later.
+- **Cons:** product is a memory harness; lighting/assets/scene graphs are scope cancer.
+- **Verdict:** reject for v1.
 
 ### A4. Drop / summarize old conversation turns (Headroom ICM)
 
 - **Pros:** naive token savings.
-- **Cons:** busts prompt cache; irreversible loss; documented as the wrong mental model in `headroom\REALIGNMENT\00-overview.md` (ICM, `DropByScoreStrategy`, `frozen_message_count: 0`).
+- **Cons:** busts prompt cache; irreversible loss; documented as the wrong mental model in `headroom\REALIGNMENT\00-overview.md`.
 - **Verdict:** forbidden. Offload to CAS; retrieve via `recall`.
 
 ### A5. HDC/VSA as the 4D space
 
 - **Pros:** binding/bundling/cleanup are real; associative memory.
-- **Cons:** D≈10^4 is not a navigable 4-manifold; no method of loci; no 3D projection that is 4D math.
-- **Verdict:** narrow keep for names only.
+- **Cons:** \(D\approx 10^4\) is not a navigable 4-manifold.
+- **Verdict:** narrow keep for names only, after PR-10.
 
 ### A6. Quaternions for 4D rotation
 
 - **Pros:** well-known.
-- **Cons:** unit quaternions parametrize \(\mathrm{SO}(3)\), not \(\mathrm{SO}(4)\). \(\mathrm{SO}(4)\) needs a pair of quaternions or 6 Givens planes.
+- **Cons:** unit quaternions parametrize \(\mathrm{SO}(3)\), not \(\mathrm{SO}(4)\).
 - **Verdict:** Givens / pair-of-quaternions if we tilt the blanket. Not v1 navigation.
 
 ### A7. FAISS OPQ as a required dependency
 
 - **Pros:** battle-tested.
-- **Cons:** not in the venv; Windows wheels are painful; v1 scale is 10k–100k, numpy is enough.
+- **Cons:** not in the venv; Windows wheels are painful; v1 scale is 10k–100k.
 - **Verdict:** optional extra later. v1 numpy PQ.
+
+### A8. Use git itself (`git hash-object`, SHA-256 experimental, `git pack-objects`)
+
+- **Pros:** zero new pack code; well-tested delta.
+- **Cons:** default SHA-1; our types are not git’s; `git gc` will not Hilbert-sort; experimental SHA-256 is still not a `Coord4` store; subprocess git on Windows is another PATH story.
+- **Verdict:** copy the family, do not shell out to git.
+
+### A9. SQLite as the whole store
+
+- **Pros:** one file, transactions, FTS5 exists here (3.49.1).
+- **Cons:** not git-family compression; not Hilbert pack locality; fights the lossless object story.
+- **Verdict:** reject as the object store. FTS5 is **not** in the v1 layout (pertinence does not use it). Reconsider as an extra index later.
+
+### A10. Off-the-shelf Hilbert (`hilbertcurve`, numpy-hilbert) or mixed-width compact Hilbert
+
+- **Pros:** less code to write; mixed-width \((4,4,3,5)\) would pack \(L_4\) without unused \(H\) cells.
+- **Cons:** typical libs are 2D/3D; mixed-width is Hamilton compact Hilbert, **not** Skilling, and a different numeric key than 5-bit equal-width. Two bijections on \(L_4\) fork pack order and `hilbert.idx`.
+- **Verdict:** port **equal-width 5-bit Skilling** ourselves (K13). Tests lockstep with Lean on \(L_4\). Compact Hilbert is a later pack-version bump, not an equivalent map.
+
+### A11. Shrink \(w\) to 16 values so 4-bit Hilbert “fits”
+
+- **Pros:** pretty `Fin 16^4`.
+- **Cons:** drops \(w=+8\), i.e. `judge good`. That is the bug.
+- **Verdict:** forbidden. Pad into 5-bit Skilling via \(\iota\) (K13).
 
 ---
 
@@ -875,14 +1042,16 @@ v1: if `config.toml` lattice bounds change, rebuild Hilbert index (`fourdmem rei
 
 | Threat | Severity | Mitigation |
 | --- | --- | --- |
-| Store contains secrets from transcripts | High | Project-scoped `.fourdmem/`; never upload; `fourdmem gc --drop oid`; recall filter does not exfiltrate off-goal secrets *by default* but is not an ACL — do not store what should not be on disk |
-| MCP/CLI as a confused deputy writing files | Med | Store I/O stays under `.fourdmem/` and `--store`; harness `mini-swe` can write the repo — that is intentional and must be run in a trusted workspace |
-| Lean/Math-Verify subprocess DoS | Med | Timeouts; Windows in-process Math-Verify; Lean REPL one worker, queue commands |
-| Prompt injection via stored notes | High | Recalled text is untrusted data, wrapped in delimiters (`<memory oid=…>`), never executed; `harness` tools do not auto-store their stdout |
+| Store contains secrets from transcripts | High | Project-scoped `.fourdmem/`; never upload; `fourdmem cas drop <oid>`; recall filter is not an ACL |
+| MCP/CLI as a confused deputy writing files | Med | Store I/O stays under `.fourdmem/` and `--store`; mini-swe can write the repo when invoked on purpose |
+| Lean/Math-Verify subprocess DoS | Med | Timeouts; Windows in-process Math-Verify; Lean REPL one worker |
+| Prompt injection via stored notes | High | Recalled text is untrusted, wrapped in delimiters (`<memory oid=…>`), never executed; harness tools do not auto-store stdout |
 | Tool-list flicker leaking to prefix cache | Med | Tools always registered (K6) |
-| Pack/idx bitrot | Low | SHA-256 of objects; idx CRC32C; `fourdmem fsck` |
+| Pack/idx bitrot | Low | SHA-256 of objects; idx `zlib.crc32`; `fourdmem fsck` |
+| Redistributing `vendor/` under MIT | High | Never commit `vendor/` (non-goal). `THIRD_PARTY.md`. CI check that `git ls-files vendor` is empty |
+| Engine port bind | Low | Localhost only; fail if exclusive port taken |
 
-No network in the core store. Engine binds `127.0.0.1` only. No telemetry in v1.
+No network in the core store. No telemetry in v1.
 
 ---
 
@@ -894,15 +1063,17 @@ Fields: `ts`, `event`, `oid`, `coord`, `goal_oid`, `tokens_in`, `tokens_out`, `t
 
 **Metrics (CLI `fourdmem stat`):** object count, pack ratio, mean recall tokens, cats-style miss rate (eval), Hilbert fsck status.
 
-**Alerts (local):** if `recall` hits hard cap > 50% of calls in a session, print a warning to stderr — the palace is being used as a dump, not as navigation.
+**Alerts (local):** if `recall` hits hard cap > 50% of calls in a session, print a warning to stderr.
 
-**Harness:** Lean/Math-Verify/mini-swe exit codes and stdout captured in the same jsonl.
+**CI (PR-13):** `.github/workflows/eval.yml` installs Python 3.12, `uv pip install -e ".[dev]"`, elan with **both** `leanprover/lean4:v4.34.0-rc2` (REPL) and `leanprover/lean4:v4.33.1` (FourDMem), then `fourdmem eval v1`. Hilbert exhaustive in Python is the cheap gate; Lean `#eval` time is measured on the first PR-3 CI run before anyone promises 60s.
 
 ---
 
 ## Rollout Plan
 
-There is no production fleet. Rollout is **repo PRs** plus a local feature flag file `.fourdmem/config.toml`.
+There is no production fleet. Rollout is **repo PRs** plus a local, **gitignored** `.fourdmem/config.toml`.
+
+Committed defaults live in code / `fourdmem/default.toml` **without machine paths**:
 
 ```toml
 n = 4
@@ -910,23 +1081,27 @@ token_budget = 512
 token_hard_cap = 1024
 tau = 0.35
 engine_window = false
+engine_port = 4747
 auto_reorganize_every = 64
 query_mode = "neutral"
-lean_toolchain = "leanprover/lean4:v4.33.1"
-elan_home = "C:\\Users\\coled\\scoop\\persist\\elan\\.elan"
+max_occupants_per_cell = 16
+lean_repl_toolchain = "leanprover/lean4:v4.34.0-rc2"   # vendor REPL cwd
+lean_proofs_toolchain = "leanprover/lean4:v4.33.1"      # lean/FourDMem
+# elan_home is NOT set here; discover at runtime
 ```
+
+A developer may set `elan_home` in **gitignored** `.fourdmem/config.toml`. Example (not committed): `elan_home = "C:\\Users\\coled\\scoop\\persist\\elan\\.elan"`.
 
 **Stages**
 
-1. Harnesses runnable (`fourdmem harness ...`) — PR-1.
+1. Harnesses runnable on the existing package — PR-1.
 2. CAS round-trip — PR-2.
-3. Hilbert Lean check green — PR-3.
-4. Palace + recall + cats test green — PRs 4–8.
-5. Principles + pack gc — PRs 9–11.
-6. MCP attached to Grok — PR-12.
-7. Flag `engine_window=true` only after headless snapshot tests pass.
+3. Hilbert Lean+Python check green on \(L_4\) — PR-3 (`reindex` stub).
+4. Palace + `Coord4` + recall + cats test green — PRs 4–8.
+5. PR-13 `fourdmem eval v1` is the **v1 success-bar merge gate**.
+6. Principles, VSA, pack gc, MCP, optional window — PRs 9–12, 14 (post-bar).
 
-**Rollback:** every write is append-only CAS. `refs/HEAD` can point at a previous commit. `fourdmem reset --to <oid>` moves HEAD; objects stay. Disable recall by not calling the tool (passthrough remains valid).
+**Rollback:** every write is append-only CAS. `refs/HEAD` can point at a previous commit. `fourdmem reset --to <oid>` moves HEAD; objects stay. Disable recall by not calling the tool.
 
 ---
 
@@ -934,154 +1109,165 @@ elan_home = "C:\\Users\\coled\\scoop\\persist\\elan\\.elan"
 
 | Risk | Severity | Mitigation |
 | --- | --- | --- |
-| LLMs ignore landmarks and dump everything into `note` | High | Token cap + titles/oids in recall; eval that fails if cats leak |
-| PQ-without-embeddings is a weak lexical index | Med | Acceptable for v1; named loci are the real retrieval; optional embedding slot later |
+| LLMs ignore landmarks and dump everything into `note` | High | Token cap + titles/oids; cats fixture |
+| PQ-without-embeddings is a weak lexical index | Med | Named loci are the real retrieval; optional embedding slot later |
 | Echo loop moves objects and breaks “I left it in the library” | High | Landmarks are immovable; unnamed objects move at most 1 cell per echo |
-| Engine becomes a game project | High | Headless-first; window PR is optional and has a hard “no lighting” spec |
-| Lean 4.33 vs vendor 4.34 mismatch | Med | K10 pin; wrapper sets ELAN toolchain |
-| Math-Verify Windows multiprocessing | Med | `parsing_timeout=0` in wrapper (observed `WinError 6` on `python -c`) |
-| Hilbert locality weaker than expected in 4D at 4 bits | Low | 4 bits is the v1 palace; raise bits without changing API |
+| Engine becomes a game project | High | Headless-first; window is PR-14 |
+| Two Lean toolchains | Med | K10: separate packages; CI installs both; never mix `.olean` |
+| Math-Verify Windows multiprocessing | Med | `parsing_timeout=0` |
+| Hilbert locality weaker because \(L_4\) is a subset of the 5-bit hypercube | Low | Unused cells of \([0,32)^4\) exist; pack order is still a bijection on \(L_4\). Do not “fix” this with a second mixed-width coder. |
 | Tokeniser mismatch vs Grok’s real BPE | Med | Pluggable encoding name in config; log char count too |
+| mini-swe on Windows cmd.exe | Med | POSIX-first; fake-model smoke; not the only implementation path |
+| `vendor/` force-added | High | gitignore + CI `git ls-files vendor` empty + THIRD_PARTY.md |
 
 ---
 
 ## Open Questions
 
-1. Should `reorganize` ever call the user’s LLM to draft principle statements, or stay agent-authored only? **v1: agent-authored only.** Revisit after echo loop exists.
-2. Session-index vs log-time for axis 5. Lean toward discrete session index (stable under clock skew).
-3. MCP SDK vs hand-rolled stdio JSON-RPC. Prefer a thin hand-rolled server if adding `mcp` Python package is heavy; otherwise official SDK.
-4. Whether to vendor a tiny wireframe renderer at all in v1. Default: no window until headless tests pass.
+1. Should `principle assert` ever call the user’s LLM to draft statements? **v1: no.** Revisit after echo loop exists.
+2. Axis 5: **resolved — discrete session index.** Log-time is rejected (A2-class bug).
+3. MCP SDK vs hand-rolled stdio JSON-RPC. Prefer a thin hand-rolled server if adding an `mcp` package is heavy; otherwise official SDK. Decide in PR-12.
+4. Whether to vendor a tiny wireframe renderer at all in v1. Default: no window until headless snapshots are used in daily work (PR-14 optional).
 5. Store encryption at rest. Not v1.
 
 ---
 
 ## v1 Success Bar (tests that must exist)
 
+Merge bar = PRs 1–8 + PR-13. PRs 9–12, 14 are post-bar.
+
 | Test | File (planned) | Pass criterion |
 | --- | --- | --- |
-| Harness smoke | `tests/test_harness.py` | Math-Verify `1/2` vs `0.5` (or exact fraction pair that `verify` accepts); Lean `def f := 2` returns an `env`; mini-swe import `DefaultAgent` |
-| CAS round-trip | `tests/test_cas.py` | store text → oid → `cas.get` bytes equal; survives `gc` pack+delta |
-| Hilbert bijection | `tests/test_hilbert.py` + Lean | `decode(encode(p))=p` on full 16^4 grid in Python; Lean REPL exhaustive or theorem |
-| Projection identity | `tests/test_project.py` + Math-Verify | sympy Rational inverse; `parse`/`verify` on the closed form |
-| Cats distractor | `tests/test_cats.py` | `recall` for Hilbert goal does not contain `cats`; does contain Hilbert note; cats oid still in CAS |
+| Harness smoke | `tests/test_harness.py` | Math-Verify `verify` on a known pair; Lean REPL `def f := 2` returns `env` (4.34.0-rc2, skip if toolchain missing); mini-swe import + fake-model `DefaultAgent` |
+| CAS round-trip | `tests/test_cas.py` | store text → oid → `cas.get` bytes equal |
+| Hilbert bijection | `tests/test_hilbert.py` + `lean/FourDMem` | Python exhaustive on **34,816** \(L_4\) points including \(w=\pm 8\); Lean theorem on `Lattice4` (not `Fin 16^4`) |
+| Projection invertibility | `tests/test_project.py` | Python vs sympy `Rational` on a grid; slice inverse. Math-Verify tautology is smoke only |
+| Cats distractor | `tests/test_cats.py` | Frozen fixture §4; no `exclude=["cats"]`; titles+oids+first-line; cats oid still in CAS |
 | Token budget | `tests/test_budget.py` | 200 stored notes, `recall` tokens ≤ 512 (tiktoken cl100k) |
-| Navigation | `tests/test_nav.py` | `go library` → `look` shows the stored note |
-| Judge / valence | `tests/test_valence.py` | `judge good` moves \(w\) up; `prefer_good` recall prefers it |
+| Navigation | `tests/test_nav.py` | spawn \(w=0\); Hilbert at `(3,5,1,0)`; `go library` → `look`/`recall` shows the Hilbert title |
+| Coord4 occupancy | `tests/test_nav.py` | same \((x,y,z)\), different \(w\) → different Hilbert keys and blanket membership |
+| Judge / valence | `tests/test_valence.py` | `good` → \(w=+8\); `prefer_good` recall prefers it; \(w=+8\) encodes |
 | Live-zone | `tests/test_live_zone.py` | helper refuses to mutate a frozen prefix list; tools list is constant |
+| Vendor not tracked | `tests/test_gitignore.py` or CI | `git ls-files vendor` empty |
 
 ---
 
 ## References
 
-- HuggingFace Math-Verify 0.9.0 — `C:\Users\coled\Projects\4d-memory\vendor\math\Math-Verify` — `parse` (`src\math_verify\parser.py`), `verify` (`src\math_verify\grader.py`).
-- EleutherAI lm-evaluation-harness — `C:\Users\coled\Projects\4d-memory\vendor\math\lm-evaluation-harness` — `lm_eval.simple_evaluate`, `docs\python-api.md`.
-- Lean 4 community REPL — `C:\Users\coled\Projects\4d-memory\vendor\math\lean-repl` — `REPL\Main.lean`, `REPL\JSON.lean`; JSON stdin/stdout, blank-line framed.
-- Lean 4.33.1 / Lake 5.0.0 — `C:\Users\coled\scoop\persist\elan\.elan\toolchains\leanprover--lean4---v4.33.1`; elan 4.2.4.
-- mini-swe-agent 2.4.6 — `C:\Users\coled\Projects\4d-memory\vendor\coding\mini-swe-agent` — `DefaultAgent` (`src\minisweagent\agents\default.py`), `LocalEnvironment` (`environments\local.py`), bash-only, linear history.
-- Headroom negative lesson — `C:\Users\coled\Projects\headroom\REALIGNMENT\00-overview.md`, `04-phase-B-live-zone.md`, `wiki\ccr.md`, `wiki\memory.md`. Passthrough is sacred; CCR retrieve-by-hash; do not drop prefix.
+- HuggingFace Math-Verify 0.9.0 — pip; clone `vendor\math\Math-Verify` — `parse` (`src\math_verify\parser.py`), `verify` (`src\math_verify\grader.py`).
+- EleutherAI lm-evaluation-harness — `vendor\math\lm-evaluation-harness` — `lm_eval.simple_evaluate`, `docs\python-api.md`.
+- Lean 4 community REPL — `vendor\math\lean-repl` — `REPL\Main.lean`, `REPL\JSON.lean`; JSON stdin/stdout, blank-line framed; toolchain **v4.34.0-rc2**.
+- Lean 4.33.1 / Lake 5.0.0 — project proofs package `lean/FourDMem` only.
+- mini-swe-agent 2.4.6 — `vendor\coding\mini-swe-agent` — `DefaultAgent`, `LocalEnvironment`.
+- Headroom negative lesson — `C:\Users\coled\Projects\headroom\REALIGNMENT\00-overview.md`, `04-phase-B-live-zone.md`, `wiki\ccr.md`, `wiki\memory.md`.
 - Jégou, Douze, Schmid — Product Quantization for Nearest Neighbor Search, IEEE TPAMI 2011.
-- Skilling — Programming the Hilbert curve, AIP Conf. Proc. 707, 2004. (n-dimensional Hilbert.)
+- Skilling — Programming the Hilbert curve, AIP Conf. Proc. 707, 2004.
 - Charikar — Similarity estimation techniques from rounding algorithms (simhash).
-- Git pack format — content-addressable objects, zlib loose, windowed delta, pack+idx. We copy the family (SHA-256, `4DM1` magic).
-- Kanerva / Plate — Hyperdimensional computing / Holographic Reduced Representations (VSA bind/bundle/cleanup).
-- Method of loci — spatial mnemonic palaces as the navigation graph, not as decoration.
+- Git pack format — content-addressable objects, zlib loose, windowed delta, pack+idx. We copy the family (SHA-256, `4DM1` magic, `zlib.crc32`).
+- Kanerva / Plate — Hyperdimensional computing / HRR.
+- Method of loci — spatial mnemonic palaces as the navigation graph.
 
 ---
 
 ## PR Plan
 
-Incremental, independently reviewable PRs. PR-1 is mandatory first: wire the already-downloaded harnesses. No palace feature lands before the tools that will check its math and the coding loop that will build it.
+Incremental, independently reviewable PRs. **PR-1 does not create the package** — it adds harness wrappers on `src/fourdmem` + argparse subcommands. Palace features are implemented with pytest and the fourdmem CLI; mini-swe is optional and POSIX-first.
+
+**v1 success-bar PRs:** 1–8, then 13 (merge gate).  
+**Post-bar:** 9 (principles), 10 (VSA), 11 (pack/zstd), 12 (MCP), 14 (window).
+
+PR-2 can start as soon as PR-1 lands (CAS does not need Lean). PR-3 needs PR-1’s Lean wrapper. PR-4 needs PR-2. PR-5 needs PR-2 and PR-3 (`Coord4` + Hilbert). PR-10 must **not** parallelize with PR-8 in a way that puts VSA in the cats path; cats ships with stubbed VSA.
 
 ### PR-1 — Wire math + coding harnesses as invokable tools
 
-- **Title:** `PR-1: wire Math-Verify, Lean REPL, and mini-swe-agent as fourdmem harness tools`
-- **Files/components:** `pyproject.toml`; `src/fourdmem/__init__.py`; `src/fourdmem/cli.py` (Typer skeleton + `harness` subcommands); `src/fourdmem/harness/math_verify.py`; `src/fourdmem/harness/lean_repl.py`; `src/fourdmem/harness/mini_swe.py`; `src/fourdmem/harness/lm_eval.py` (list-only); `lean/lean-toolchain` (`leanprover/lean4:v4.33.1`); `tests/test_harness.py`; `README.md` (how to invoke).
-- **Dependencies:** none.
-- **Description:** Create the Python package and venv extras (`zstandard`). Wrap `math_verify.parse/verify` with Windows-safe `parsing_timeout=0`. Spawn Lean REPL with `ELAN_HOME=C:\Users\coled\scoop\persist\elan\.elan`, toolchain 4.33.1, JSON blank-line protocol from `vendor\math\lean-repl`. Wrap `minisweagent.agents.default.DefaultAgent` + `LocalEnvironment` with cwd=repo root and trajectory dir. Smoke tests: verify a known identity; `{"cmd":"def f := 2"}` returns `env`; import mini-swe 2.4.6. Do not implement the palace yet.
+- **Title:** `PR-1: harness wrappers for Math-Verify, Lean REPL, and mini-swe-agent`
+- **Files/components:** `src/fourdmem/harness/{math_verify,lean_repl,mini_swe,lm_eval,elan}.py`; argparse subcommands on **existing** `src/fourdmem/cli.py`; `lean/lean-toolchain` (`leanprover/lean4:v4.33.1`); `lean/lakefile.toml` stub; `tests/test_harness.py`; README “how to invoke” (do not claim Typer). **Do not recreate `pyproject.toml`.** Do not add `zstandard` as a required install. Do not hardcode scoop paths.
+- **Dependencies:** none (package already exists).
+- **Description:** Wrap `math_verify.parse/verify` with Windows-safe `parsing_timeout=0`. Spawn Lean REPL with discovered `ELAN_HOME` / PATH, cwd = vendor REPL, **that tree’s** 4.34.0-rc2 toolchain; smoke `{"cmd":"def f := 2"}` (skip if toolchain missing). mini-swe: import 2.4.6 + `DefaultAgent` with a fake model. Document Windows bash/cmd.exe. `lm-eval --list` if clone present.
 
 ### PR-2 — Content-addressable store (git-family loose objects)
 
 - **Title:** `PR-2: SHA-256 CAS with git-style headers and zlib loose objects`
-- **Files/components:** `src/fourdmem/store/cas.py`; `src/fourdmem/store/types.py`; `src/fourdmem/store/refs.py`; `tests/test_cas.py`.
-- **Dependencies:** PR-1 (package layout, tests harness).
-- **Description:** Object types `blob|commit|tree|...` as typed dicts. `put`/`get`/`fsck`. On-disk `.fourdmem/objects/ab/cd..`. Canonical JSON for non-blobs. Round-trip test is the gate.
+- **Files/components:** `src/fourdmem/store/{cas,types,refs}.py`; `tests/test_cas.py`.
+- **Dependencies:** PR-1 (package/tests layout only; no Lean).
+- **Description:** Object types as dataclasses. `put`/`get`/`fsck`. On-disk `.fourdmem/objects/ab/cd..`. Canonical JSON for non-blobs. Round-trip test is the gate.
 
-### PR-3 — 4D Hilbert / Morton + Lean invariant
+### PR-3 — 4D Hilbert / Morton + Lean invariant on Lattice4
 
-- **Title:** `PR-3: 4D Hilbert and Morton coders with Lean encode/decode check`
-- **Files/components:** `src/fourdmem/quant/hilbert.py`; `src/fourdmem/quant/morton.py`; `src/fourdmem/space/lattice.py`; `lean/FourDMem/Hilbert.lean`; `tests/test_hilbert.py`.
-- **Dependencies:** PR-1 (Lean wrapper), PR-2 (optional, can land in parallel after PR-1).
-- **Description:** Skilling n-D Hilbert, n=4, bits=4, signed \(w\) mapped to \(w+W\). Morton bit-interleave as debug coder. Python exhaustive bijection on \(16^4\). Lean file checked via `fourdmem harness lean`. Lattice bounds from Key Decision K2.
+- **Title:** `PR-3: Hilbert/Morton on L_4 (17-valued w) with Lean Lattice4 round-trip`
+- **Files/components:** `src/fourdmem/quant/{hilbert,morton}.py`; `src/fourdmem/space/lattice.py`; `lean/FourDMem/Hilbert.lean`; `tests/test_hilbert.py`; CLI `reindex` stub.
+- **Dependencies:** PR-1 (Lean discover + `lake build` in `lean/`).
+- **Description:** K13: \(\iota\) then **equal-width 5-bit Skilling** on \([0,32)^4\); 20-bit keys in `uint32`; reject non-\(L_4\). Python exhaustive 34,816 including \(w=\pm 8\). Lean theorem on `Lattice4`, not `Fin 16^4`. Measure `#eval` time; do not promise 60s. Morton is 5-bit interleave of the same \(\iota(p)\). One on-disk map; no mixed-width twin.
 
 ### PR-4 — Simhash + product quantization (numpy)
 
 - **Title:** `PR-4: context quantization — simhash, n-gram sketch, numpy PQ`
-- **Files/components:** `src/fourdmem/quant/simhash.py`; `src/fourdmem/quant/pq.py`; `tests/test_pq.py`.
+- **Files/components:** `src/fourdmem/quant/{simhash,pq}.py`; `tests/test_pq.py`.
 - **Dependencies:** PR-2.
-- **Description:** 256-bit Charikar simhash, 64-byte 3-gram sketch, PQ M=8 k=256, identity OPQ. Train on a reservoir. No FAISS. Placement helper: PQ-nearest cell vote.
+- **Description:** 256-bit Charikar simhash, 64-byte 3-gram sketch, PQ M=8 k=256, identity OPQ. No FAISS.
 
-### PR-5 — Mnemonic palace graph and movement grammar
+### PR-5 — Mnemonic palace graph with Coord4 occupancy
 
-- **Title:** `PR-5: method-of-loci palace — rooms, landmarks, go/step/follow, paths as memory`
-- **Files/components:** `src/fourdmem/palace/graph.py`; `src/fourdmem/palace/paths.py`; `src/fourdmem/api.py` (navigate); CLI verbs `go|step|follow|mark|path`; `tests/test_nav.py`.
+- **Title:** `PR-5: method-of-loci palace — Coord4 rooms, landmarks, go/step/follow, paths`
+- **Files/components:** `src/fourdmem/palace/{graph,paths}.py`; `src/fourdmem/api.py`; CLI `go|step|follow|mark|path`; `tests/test_nav.py`.
 - **Dependencies:** PR-2, PR-3.
-- **Description:** 16×16×8 grid graph, instant teleports, stored `path` objects, landmarks unique. No renderer yet — tests assert coordinates and occupancy.
+- **Description:** Occupancy is `Coord4` from day one. Edges are 3D + stairs. `max_occupants_per_cell = 16`. Landmark `go` keeps agent \(w\). **Test:** two objects at same \((x,y,z)\) different \(w\) → different Hilbert keys and blanket membership. No renderer yet.
 
 ### PR-6 — 4D blanket, 3D projection, headless engine
 
 - **Title:** `PR-6: 4D blanket slice, perspective projection, headless engine snapshot`
-- **Files/components:** `src/fourdmem/space/project.py`; `src/fourdmem/space/givens.py`; `src/fourdmem/palace/engine.py`; `src/fourdmem/palace/snapshot.py`; `lean/FourDMem/Projection.lean`; `tests/test_project.py`.
+- **Files/components:** `src/fourdmem/space/{project,givens}.py`; `src/fourdmem/palace/{engine,snapshot}.py`; `tests/test_project.py`.
 - **Dependencies:** PR-3, PR-5.
-- **Description:** Axis-aligned 3-flat \(w=c\); projection \(\frac{d}{d-w}(x,y,z)\); JSON-RPC on `127.0.0.1:4747`; ASCII/JSON snapshot. Math-Verify/sympy identity test. Givens helpers present but unused by navigation. **No window, no lighting.**
+- **Description:** Axis-aligned 3-flat \(w=c\); projection \(\frac{d}{d-w}(x,y,z)\); JSON-RPC with port fallback §6; snapshot `cell` is 4-int. Python vs sympy `Rational`. Givens present, unused by navigation. **No window, no lighting.**
 
 ### PR-7 — Valence axis and `judge`
 
 - **Title:** `PR-7: valence as w — judge good/bad, prefer_good/prefer_bad neighborhoods`
 - **Files/components:** `src/fourdmem/retrieve/valence.py`; `judgment` type; CLI `judge|ascend|descend|slice`; `tests/test_valence.py`.
 - **Dependencies:** PR-5, PR-6.
-- **Description:** Quantize valence \([-1,1]\) onto \(w \in [-8,8]\). `judge` writes a `judgment` object and moves occupancy. Query modes select \(w\) bands. Related good/bad = same \((x,y,z)\) neighborhood at different \(w\).
+- **Description:** `w = clamp(round(v * 8), -8, 8)`; `good≡+1.0` → \(w=+8\) (Hilbert-legal). `query_mode` on the goal object. Related good/bad = same \((x,y,z)\) neighborhood at different \(w\).
 
-### PR-8 — Goal filter, `recall`, token budget
+### PR-8 — Goal filter, `recall`, token budget, frozen cats fixture
 
-- **Title:** `PR-8: goal-conditioned recall with measured token budget (cats test)`
-- **Files/components:** `src/fourdmem/retrieve/goal.py`; `src/fourdmem/retrieve/recall.py`; `src/fourdmem/budget.py`; `tests/test_cats.py`; `tests/test_budget.py`; `evals/cats_distractor.yaml`.
-- **Dependencies:** PR-4, PR-7.
-- **Description:** Pertinence formula from §4. `recall` packs titles+oids under 512 tokens (tiktoken cl100k). Cats distractor is a failing gate if `cats` appears. CAS still holds the distractor. Live-zone helper: recall is a tool result only.
+- **Title:** `PR-8: goal-conditioned recall with measured token budget (cats fixture)`
+- **Files/components:** `src/fourdmem/retrieve/{goal,recall}.py`; `src/fourdmem/budget.py`; `tests/test_cats.py`; `tests/test_budget.py`; `evals/cats_distractor.yaml`.
+- **Dependencies:** PR-4, PR-7. **Not** PR-10.
+- **Description:** Renormalized pertinence (no VSA). Frozen fixture §4. `look` uses the same \(\tau\). Recall bytes = title + oid + first line. Secondary test for `exclude` terms. Live-zone helper: recall is a tool result only.
 
-### PR-9 — Principles + echo reorganization
+### PR-9 — Principles + echo reorganization (post-bar)
 
 - **Title:** `PR-9: principles layer and echo/becoming loop`
-- **Files/components:** `src/fourdmem/principles/model.py`; `src/fourdmem/principles/echo.py`; CLI `principle assert|list`, `reorganize`; `tests/test_echo.py`.
+- **Files/components:** `src/fourdmem/principles/{model,echo}.py`; CLI `principle assert|list`, `reorganize`; `tests/test_echo.py`.
 - **Dependencies:** PR-8.
-- **Description:** `principle` objects, `refs/principles`, `echo_count`. Batched reorganize: cluster, reinforce, unnamed objects move ≤1 cell, landmarks immovable. No hidden LLM call. Caches `principle_score` for future axis 6.
+- **Description:** Split verbs: `reorganize` moves unnamed ≤1 cell and increments `echo_count`; `principle assert` mints. No hidden LLM. Cache `principle_score` for axis 6.
 
-### PR-10 — VSA language objects (names, mnemonics, cleanup)
+### PR-10 — VSA language objects (post-bar)
 
 - **Title:** `PR-10: first-class language objects with HDC bind/bundle/cleanup`
 - **Files/components:** `src/fourdmem/vsa/hdc.py`; `lang` type; `tests/test_vsa.py`.
-- **Dependencies:** PR-5.
-- **Description:** D=8192 bipolar; bind names to loci; bundle room occupants; cleanup for `go` typos. Does not change coordinates.
+- **Dependencies:** PR-5. Optional restore of 0.15 pertinence term **after** cats is green.
+- **Description:** D=8192; `locus_vec` from `struct.pack("<4i", *coord)`. Cleanup cosine ≥ 0.15 tested, not proved. Does not change coordinates.
 
-### PR-11 — Packfiles, delta compression, zstd gc
+### PR-11 — Packfiles, delta compression, zstd gc (post-bar)
 
-- **Title:** `PR-11: Hilbert-ordered packfiles with copy/insert delta and zstd`
-- **Files/components:** `src/fourdmem/store/pack.py`; CLI `gc|fsck`; `tests/test_pack.py`.
+- **Title:** `PR-11: Hilbert-ordered packfiles with copy/insert delta and optional zstd`
+- **Files/components:** `src/fourdmem/store/pack.py`; CLI `gc|fsck`; `tests/test_pack.py`. Extra `[pack]` pulls `zstandard`.
 - **Dependencies:** PR-2, PR-3.
-- **Description:** `4DM1` pack magic; Hilbert sort; window-4 REF_DELTA; zstd on packed payloads; zlib remains for loose. Round-trip after gc is the gate.
+- **Description:** `4DM1` / `4DI1` layouts in §7.3. `zlib.crc32`. REF_DELTA window-4. gc tmp+fsync+rename then delete loose. Round-trip after gc is the gate.
 
-### PR-12 — MCP server + live-zone agent attachment
+### PR-12 — MCP server + live-zone agent attachment (post-bar)
 
 - **Title:** `PR-12: MCP stdio server and live-zone attachment rules`
-- **Files/components:** `src/fourdmem/agent/mcp.py`; `src/fourdmem/agent/tools.py`; `src/fourdmem/agent/live_zone.py`; `tests/test_live_zone.py`.
-- **Dependencies:** PR-8, PR-1 (harness tools exposed on MCP too).
-- **Description:** Always-on tool list. Tests that a frozen prefix is not mutated. Grok/MCP and CLI call the same `Store`. Document the Headroom constraint in `README.md`.
+- **Files/components:** `src/fourdmem/agent/{mcp,tools,live_zone}.py`; `tests/test_live_zone.py`.
+- **Dependencies:** PR-8, PR-1.
+- **Description:** Always-on tool list. Frozen prefix is not mutated. Grok/MCP and CLI call the same `Store`.
 
-### PR-13 — Eval suite: round-trip, cats, Hilbert, lm-eval task
+### PR-13 — Eval suite: v1 success-bar merge gate
 
-- **Title:** `PR-13: v1 success-bar evals and lm-eval task yaml`
-- **Files/components:** `evals/`; `tests/test_roundtrip.py`; `src/fourdmem/harness/lm_eval.py` (run); optional `evals/lm-eval/fourdmem_invariants.yaml`.
-- **Dependencies:** PR-8, PR-3, PR-11.
-- **Description:** One command `fourdmem eval v1` runs cats, budget, CAS-after-pack, Lean Hilbert, projection verify. This is the merge bar for “v1 works.”
+- **Title:** `PR-13: v1 success-bar evals, CI elan recipe, vendor-not-tracked check`
+- **Files/components:** `evals/`; `tests/test_roundtrip.py`; `.github/workflows/eval.yml`; `fourdmem eval v1`; `tests/test_gitignore.py`.
+- **Dependencies:** PR-8, PR-3.
+- **Description:** One command runs cats, budget, CAS, Hilbert exhaustive, projection-vs-sympy, Lean `lake build` in `lean/` if 4.33.1 present, REPL smoke if 4.34.0-rc2 present. CI: `elan toolchain install` both pins. `git ls-files vendor` must be empty.
 
 ### PR-14 — Optional wireframe window (no lighting)
 
@@ -1089,5 +1275,3 @@ Incremental, independently reviewable PRs. PR-1 is mandatory first: wire the alr
 - **Files/components:** `src/fourdmem/palace/window.py` (or skip).
 - **Dependencies:** PR-6.
 - **Description:** Only if headless snapshots are already used in daily work. Boxes, labels, instant teleports, no lighting. Easy to reject.
-
-PRs 3/4/10 and 11 can parallelize after their dependencies. Feature work on the palace should be implemented *through* mini-swe-agent (`fourdmem harness mini-swe`) once PR-1 lands — that is the point of wiring the coding harness first.

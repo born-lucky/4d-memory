@@ -28,7 +28,17 @@ A memory occupies a point of
 L_4 = \mathbb{Z}^4 \cap \bigl([0,X)\times[0,Y)\times[0,Z)\times[-W,W]\bigr)
 \]
 
-v1 defaults: \(X=16\), \(Y=16\), \(Z=8\), \(W=8\). That is \(16\times 16\times 8\times 17 = 34{,}816\) cells. Many objects may share a cell. The palace is a *view* over objects, not 1:1 with them.
+v1 defaults: \(X=16\), \(Y=16\), \(Z=8\), \(W=8\). That is \(16\times 16\times 8\times 17 = 34{,}816\) cells. Many objects may share a cell (cap 16). The palace is a *view* over objects, not 1:1 with them.
+
+This box is not a power-of-two hypercube on purpose: eight floors is a palace; 256 rooms per floor is walkable; **17 valence levels exist so both poles \(\pm 1.0\) and zero are representable**. Shrinking \(w\) to 16 values would drop \(w=+8\) (`judge good`). Forbidden.
+
+**Valence map:** `good ≡ +1.0`, `bad ≡ -1.0`,
+
+\[
+w = \mathrm{clamp}(\mathrm{round}(v\cdot W),-W,W).
+\]
+
+So \(+1.0 \mapsto +8\), which the Hilbert coder in §4 must accept.
 
 | Axis | Name | Meaning | Who writes it |
 | --- | --- | --- | --- |
@@ -41,13 +51,15 @@ v1 defaults: \(X=16\), \(Y=16\), \(Z=8\), \(W=8\). That is \(16\times 16\times 8
 
 Goal pertinence is a **query-time gate** (section 6). The two compose. They are not the same coordinate.
 
-Distance on the lattice is Chebyshev:
+Distance on the lattice is Chebyshev (not Manhattan: a diagonal neighbor is one look in a palace):
 
 \[
 d_\infty(p,q) = \max_i |p_i - q_i|.
 \]
 
 v1 recall neighborhood: radius \(1\) on \((x,y,z)\), radius \(1\) on \(w\) unless `prefer_good` / `prefer_bad` opens toward a pole.
+
+Occupancy is always a `Coord4`. A landmark names an \((x,y,z)\) column; `go library` keeps the agent's \(w\). Two objects at the same \((x,y,z)\) and different \(w\) have different Hilbert keys and different blanket membership.
 
 ---
 
@@ -77,13 +89,7 @@ On an axis-aligned slice \(w = c\) this is a uniform scale, so palace geometry i
 (x,y,z) = \frac{d-c}{d}\,(x',y',z').
 \]
 
-**Invariant (checked with sympy / HuggingFace Math-Verify):**
-
-\[
-\frac{d}{d-w}\cdot\frac{d-w}{d} = 1 \qquad (w \ne d).
-\]
-
-The Python projector is tested against sympy `Rational`s. Math-Verify `parse` / `verify` scores the closed form. That is why a math harness is a *tool* of this project, not a badge.
+**Engineering test:** Python projector vs sympy `Rational`s on a grid of \(L_4\), plus invertibility on a slice. The identity \(\frac{d}{d-w}\cdot\frac{d-w}{d}=1\) is an algebraic tautology; Math-Verify may `parse`/`verify` it as **harness smoke only**. It is not a 4D-index invariant. The Hilbert bijection on \(L_4\) is.
 
 ---
 
@@ -91,24 +97,39 @@ The Python projector is tested against sympy `Rational`s. Math-Verify `parse` / 
 
 Occupied cells need a locality-preserving 1D key: packfile order, B-tree key, “nearby in 4D ⇒ nearby on disk.”
 
-**Default: n-dimensional Hilbert curve** (Skilling, *Programming the Hilbert curve*, AIP 707, 2004). \(n=4\), \(b=4\) bits per unsigned axis. Map valence by \(w' = w + W\) so \(w' \in [0,16)\), then encode \((x,y,z,w')\) → a 16-bit index (stored in `uint32` so dimensions 5+ have headroom).
+**Default: n-dimensional Hilbert curve** (Skilling, *Programming the Hilbert curve*, AIP 707, 2004) on the **actual** \(L_4\), not a 4-bit cube.
+
+A 4-bit unsigned axis is \(\{0,\ldots,15\}\). Mapping \(w' = w+W\) with \(W=8\) gives \(w'=16\) at the good pole, which **does not fit in 4 bits**. Dropping \(w=+8\) is forbidden.
+
+Injection:
+
+\[
+\iota(x,y,z,w) = (x,\,y,\,z,\,w+8), \qquad w+8\in[0,16].
+\]
+
+**The on-disk coder (the only one):** equal-width **5-bit** Skilling 2004, \(n=4\), on the padded hypercube \(H=[0,32)^4\). Encode \(\iota(p)\); key is 20 bits in a `uint32`. Decode rejects points not in \(\iota(L_4)\) (\(z\ge 8\) or \(w'\ge 17\), etc.). Mixed-width \((4,4,3,5)\) is a different map (compact Hilbert, not Skilling) and is **not** v1.
 
 ```text
-hilbert_encode_4d(x, y, z, w, bits=4) -> int
-hilbert_decode_4d(h, bits=4) -> (x, y, z, w)
+hilbert_encode_4d(x, y, z, w) -> int      # requires p in L_4; Skilling-5(ι(p))
+hilbert_decode_4d(h) -> Coord4 | error    # error if not in L_4
 ```
 
-**Morton (Z-order)** is the debug coder: bit-interleave of the four axes. Worse locality, trivial invertibility. Used as a differential test against Hilbert.
+**Morton (Z-order)** is the debug coder: bit-interleave of the same 5-bit padded \(\iota(p)\).
 
-**Lean invariant.** The Lean 4 community REPL — the same JSON stdin/stdout tool AlphaProof-style agents talk to — machine-checks:
+**Lean invariant** — same 34,816-cell set Python encodes, **not** `Fin 16^4`:
 
 ```lean
-theorem hilbert_encode_decode_id
-    (p : Fin 16 × Fin 16 × Fin 16 × Fin 16) :
-    decode (encode p) = p
+structure Lattice4 where
+  x : Fin 16
+  y : Fin 16
+  z : Fin 8
+  wShifted : Fin 17   -- valence w = wShifted.val - 8
+
+theorem hilbert_encode_decode_id (p : Lattice4) :
+    decode (encode p) = some p
 ```
 
-\(16^4 = 65{,}536\), so exhaustive `#eval` over the grid is a legitimate check (seconds). Morton invertibility is `native_decide` on the bit operations. Python property tests: 10k random points, `decode(encode(p)) = p`.
+Python exhaustive bijection on all 34,816 points (including \(w=\pm 8\)) is the engineering gate. Lean `#eval` over `Lattice4` if it fits the CI budget; otherwise a reduced-bit toy plus lockstep samples. Morton invertibility is `native_decide` on the bit operations.
 
 This is 4D mathematics the agent can *run*, not a slide about tesseracts.
 
@@ -125,11 +146,11 @@ This is 4D mathematics the agent can *run*, not a slide about tesseracts.
    payload = f"{type} {len(data)}\0".encode() + data
    oid     = sha256(payload)
    ```
-   Loose path: `.fourdmem/objects/{oid[:2]}/{oid[2:]}` zlib level 6. Same header convention as Git; hash is SHA-256, not SHA-1.
+   Loose path: `.fourdmem/objects/{oid_hex[:2]}/{oid_hex[2:]}` zlib level 6, where `oid` is the **raw 32-byte** SHA-256 and `oid_hex` is its hex encoding. Same header convention as Git; hash is SHA-256, not SHA-1.
 4. **Simhash (256-bit).** Charikar fingerprints: tokenize, SHA-256 each token, signed sum of feature bits. Hamming distance is the lexical metric.
 5. **N-gram sketch (64 bytes).** 3-grams of lowercase letters into a 1-row count-min sketch.
 6. **Product quantization** (Jégou, Douze, Schmid, IEEE TPAMI 2011). Concatenate simhash-as-32-uint8 + sketch → 96 bytes. Split into \(M=8\) subvectors. Each subspace: k-means with \(k=256\). Code = **8 bytes**. Identity OPQ (\(R = I\)) until an explicit train. Residual quantization is a later flag. **No FAISS required in v1** — numpy is enough at 10k–100k objects.
-7. **Placement.** Named mnemonic wins. Else majority-vote of PQ-nearest cells. Else `hash-to-cell` from the oid.
+7. **Placement.** Always a `Coord4`. Named mnemonic wins (landmark \((x,y,z)\), current \(w\)). Else majority-vote of PQ-nearest cells if occupancy \(< 16\); else walk forward on the Hilbert curve. Else `hash_to_cell(digest: bytes) -> Coord4` on the **raw 32-byte SHA-256**: `(digest[0]%16, digest[1]%16, digest[2]%8, 0)`. \(w=0\) until `judge`.
 
 Quantization **never replaces** the blob. `cas.get(oid)` is always the original.
 
@@ -141,23 +162,28 @@ PQ is an *index*. The palace is the *place*. Mixing those up is how you accident
 
 Every prompt has a goal. The goal is an object (`type=goal`) and `refs/goal`.
 
+**v1 (VSA stubbed, weights renormalized over 0.85):**
+
 \[
 \begin{aligned}
 \mathrm{pertinence}(g,m)
-&= 0.40\cdot J(\mathrm{tok}(g),\mathrm{tok}(m)) \\
-&+ 0.25\cdot\bigl(1 - d_H(g.\mathrm{pq}, m.\mathrm{pq}) / M\bigr) \\
-&+ 0.20\cdot \frac{1}{1 + d_{\mathrm{graph}}(\mathrm{agent}, m)} \\
-&+ 0.15\cdot \sigma(\mathrm{vsa}(g,m))
+&= 0.47\cdot J(\mathrm{tok}(g),\mathrm{tok}(m)) \\
+&+ 0.29\cdot\bigl(1 - d_H(g.\mathrm{pq}, m.\mathrm{pq}) / M\bigr) \\
+&+ 0.24\cdot \frac{1}{1 + d_{\mathrm{graph}}(\mathrm{agent}, m)}
 \end{aligned}
 \]
 
-\(J\) is Jaccard on tokens, \(d_H\) Hamming on PQ codes, \(d_{\mathrm{graph}}\) palace-graph distance, \(\sigma\) maps VSA cosine from \([-1,1]\) to \([0,1]\).
+After the VSA layer ships, restore \(0.40+0.25+0.20+0.15\) with \(\sigma\) mapping VSA cosine from \([-1,1]\) to \([0,1]\). Until then `vsa_score = 0`.
 
-Include \(m\) in `recall` iff pertinence \(\ge \tau\) (default \(0.35\)), **or** \(m\) lies on the current stored path, **or** the agent `look`s at that cell — **and not** if \(m\) is tagged `not_pertinent` for this goal, or exclude-terms match with pertinence \(< 0.50\).
+\(J\) is Jaccard on tokens, \(d_H\) Hamming on PQ codes, \(d_{\mathrm{graph}}\) palace-graph distance on `Coord4`.
 
-**Cats test.** Goal: *prove Hilbert 4D encode/decode is bijective*. Stored: that note, and “I saw cats on screen.” `recall` must contain the Hilbert note and must not contain `cats`. The cats oid **remains in the CAS**. We offload. We do not delete.
+`look` and `recall` use the **same** \(\tau\) (default \(0.35\)). Neither bypasses the gate. `recall` may add **path crumbs** (landmark + oid of path vertices), not every occupant of those cells.
 
-Valence chooses *which neighborhood* is walked (`prefer_good` opens toward \(+W\)). It does not decide whether cats pass the gate. Judgment without a goal still moves \(w\). Goal without judgment still filters.
+Include \(m\) in `recall` iff pertinence \(\ge \tau\) or \(m\) is a path crumb — **and not** if \(m\) is tagged `not_pertinent` for this goal, or exclude-terms match with pertinence \(< 0.50\).
+
+**Frozen cats fixture.** Goal: *prove Hilbert 4D encode/decode is bijective* with **empty exclude list**. Agent spawn \(w=0\). Hilbert note at `library` `Coord4 (3,5,1,0)` — same slice `go library` lands on. Cats at `(12,2,0,0)`, no landmark, not on the path. Agent `go library` then `recall`. `go` does **not** snap to an occupant’s \(w\). Recall bytes are `title + oid_hex + first line of blob`. Must contain `Hilbert` and the Hilbert oid; must not contain `cats`. Cats oid remains in CAS. Do not “fix” this with `exclude=["cats"]`.
+
+Valence chooses *which neighborhood* is walked (`prefer_good` opens toward \(+W\)). It does not decide whether cats pass the gate. `query_mode` is a field on the goal object, not an axis. Judgment without a goal still moves \(w\). Goal without judgment still filters.
 
 ---
 
@@ -169,8 +195,9 @@ Lossless reconstruction is a v1 success bar. We copy the **family**, not `git fs
 | --- | --- |
 | content-addressable objects | SHA-256 of `{type} {size}\0` + payload |
 | zlib loose objects | zlib level 6 under `.fourdmem/objects/` |
-| packfiles, windowed delta | Hilbert-ordered pack, window-4 copy/insert delta |
-| recently zstd | zstd on packed payloads (`4DM1` magic) |
+| packfiles, windowed delta | Hilbert-ordered `4DM1` pack, window-4 REF_DELTA copy/insert |
+| recently zstd | optional `[pack]` extra; zlib always legal |
+| pack idx CRC | `zlib.crc32` (IEEE CRC-32), not CRC32C |
 
 `fourdmem gc`:
 
@@ -190,10 +217,12 @@ Hyperdimensional computing / vector-symbolic architecture (Kanerva; Plate) is **
 
 VSA earns a narrow keep:
 
-- \(D = 8192\), bipolar \(\{\pm 1\}\), seeded from `blake2b(name)`
-- **Bind:** componentwise multiply, `name ⊙ locus`
+- \(D = 8192\), bipolar \(\{\pm 1\}\)
+- `name_vec(name) = bipolar_from_blake2b(b"name:" + name.encode(), D)`
+- `locus_vec(x,y,z,w) = bipolar_from_blake2b(b"locus:" + pack("<4i", x,y,z,w), D)` — not a random table, not `blake2b(name)` alone
+- **Bind:** componentwise multiply, `name_vec ⊙ locus_vec`
 - **Bundle:** signed sum + sign (a room is the bundle of its occupant binds)
-- **Cleanup:** probe the item memory by cosine; winner if \(\ge 0.15\)
+- **Cleanup:** probe the item memory by cosine; winner if \(\ge 0.15\) (heuristic; random cosine \(\sim 1/\sqrt{D}\))
 
 `go <name>` uses cleanup for typos. Exact landmark match wins first. Coordinates still come from \(\mathbb{Z}^4\).
 
@@ -203,12 +232,13 @@ VSA earns a narrow keep:
 
 The store has a real `principle` type: statement, weight, evidence oids, `echo_count`. `refs/principles` points at a tree of them. The VSA bundle of principle statements is the identity vector of the store.
 
-`reorganize` (also auto every 64 `store`/`judge` events):
+`reorganize` (also auto every 64 `store`/`judge` events) **does not mint principles**:
 
 1. Cluster by PQ code + \(w\) band.
-2. If a cluster has ≥3 same-sign judgments, reinforce a principle from majority reasons (agent-authored; v1 does not hide an LLM call inside gc).
-3. Unnamed occupants may move at most one Chebyshev step toward the cluster median. **Landmarks never move.**
-4. Increment `echo_count`. Append an event. Never touch conversation history.
+2. Unnamed occupants may move at most one Chebyshev step toward the cluster median. **Landmarks never move.**
+3. Increment `echo_count`. Append an event. Never touch conversation history.
+
+Minting is a separate verb: `principle assert --statement "..."` (agent-authored; v1 does not hide an LLM call inside gc).
 
 This is the “organization of itself” constraint, encoded as data.
 
@@ -221,7 +251,7 @@ v1 code uses `LatticeND` with default \(n=4\). Hilbert, Morton, pack order, and 
 | Dim | Axis | Object | Verb | When |
 | --- | --- | --- | --- | --- |
 | 4 | \(w\) valence | signed lattice coord | `judge` / `ascend` / `descend` | **v1** |
-| 5 | \(t\) epoch | session index (or \(\lfloor\log_2(1+\Delta t)\rfloor\)) | `earlier` / `later` | v2 |
+| 5 | \(t\) epoch | **discrete session index** (not \(\lfloor\log_2(1+\Delta t)\rfloor\), which would move objects as the clock ticks) | `earlier` / `later` | v2 |
 | 6 | \(p\) principle-alignment | \(\mathrm{quantize}(\mathrm{sim}(obj, P_t))\), derived on echo | `align` | v3 |
 | 7 | \(e\) echo/becoming | \(\mathrm{echo\_count}\) (or log), centrality in the store's own organization | `become` | v4 |
 
@@ -252,8 +282,9 @@ Frontier labs do not “prompt harder” at mathematics. They **harness** a chec
 
 | Tool | Who uses that class of tool | What fourdmem uses it for |
 | --- | --- | --- |
-| Lean 4 REPL (`lake exe repl`, JSON) | DeepMind-style provers, Anthropic formal-math, Meta autoformalization | Hilbert encode/decode bijection; Morton invertibility |
-| HuggingFace Math-Verify + sympy | Math RL / eval pipelines | Projection identity; rational closed forms |
+| Lean 4 REPL (`lake exe repl`, JSON) at **v4.34.0-rc2** | DeepMind-style provers, Anthropic formal-math, Meta autoformalization | REPL smoke; not mixed with 4.33 `.olean` |
+| `lean/FourDMem` Lake package at **v4.33.1** | same | Hilbert encode/decode on `Lattice4`; Morton invertibility |
+| HuggingFace Math-Verify + sympy | Math RL / eval pipelines | Harness smoke; projector vs sympy `Rational` |
 | EleutherAI lm-evaluation-harness | Standard company eval harness | Task YAML for the v1 success bar |
 | mini-swe-agent | Meta, NVIDIA, IBM, … coding baseline | The loop that *builds* this repo |
 
