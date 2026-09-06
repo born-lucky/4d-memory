@@ -54,20 +54,33 @@ def main(argv: list[str] | None = None) -> int:
     p_cas = sub.add_parser("cas", help="lossless retrieve (even bad stays)")
     p_cas.add_argument("oid")
 
-    p_mv = sub.add_parser("harness", help="lab tools: math-verify")
-    p_mv.add_argument("tool", choices=["math-verify"])
-    p_mv.add_argument("--gold", required=True)
-    p_mv.add_argument("--answer", required=True)
+    p_mv = sub.add_parser("harness", help="lab tools: math-verify, lean")
+    p_mv.add_argument("tool", choices=["math-verify", "lean"])
+    p_mv.add_argument("--gold", default=None)
+    p_mv.add_argument("--answer", default=None)
+    p_mv.add_argument("--lean-cmd", dest="lean_cmd", default=None, help="Lean command, e.g. def f := 2")
 
     args = parser.parse_args(argv)
     cmd = args.cmd or "status"
 
     if cmd == "harness":
-        from fourdmem.harness.math_verify import verify_pair
+        if args.tool == "math-verify":
+            from fourdmem.harness.math_verify import verify_pair
 
-        ok = verify_pair(args.gold, args.answer)
-        print("true" if ok else "false")
-        return 0 if ok else 1
+            if not args.gold or not args.answer:
+                print("math-verify needs --gold and --answer", file=sys.stderr)
+                return 2
+            ok = verify_pair(args.gold, args.answer)
+            print("true" if ok else "false")
+            return 0 if ok else 1
+        if args.tool == "lean":
+            from fourdmem.harness.lean_repl import run_cmd as lean_cmd
+
+            if not args.lean_cmd:
+                print("lean needs --lean-cmd", file=sys.stderr)
+                return 2
+            print(json.dumps(lean_cmd(args.lean_cmd)))
+            return 0
 
     st = _store(args)
 

@@ -120,8 +120,28 @@ fourdmem store "I saw cats on screen."
 fourdmem recall                  # good of that plan — no cats
 fourdmem recall --kind bad       # junk, explicit
 fourdmem cas <oid>               # lossless, even for bad
-fourdmem harness math-verify --gold "$\frac{1}{2}$" --answer "$\frac{1}{2}$"
+fourdmem harness math-verify --gold 1/2 --answer 0.5    # true
+fourdmem harness lean --lean-cmd "def f := 2"           # {"env": 0}
 ```
+
+## How we test the math harness
+
+This is **not** a website. Labs harness math as **local tools** you download and call:
+
+| Tool | Where it comes from | What we assert |
+| --- | --- | --- |
+| HuggingFace **Math-Verify** | `pip install math-verify` (PyPI) | `1/2` equals `0.5` → true; `1/2` vs `1/3` → false |
+| Lean 4 **REPL** | clone `leanprover-community/repl`, `lake exe repl` | `def f := 2` returns `{"env": 0}` with no errors |
+| Memory work loop | `fourdmem` itself | Hilbert note is `good`; cats are `bad` and stay out of `recall` |
+
+```bash
+pip install -e ".[dev]"
+pytest -q
+# tests/test_harness.py  — Math-Verify true/false + Lean env
+# tests/test_work_loop.py — two kinds, CAS still has bad
+```
+
+Lean is skipped only if `lake` / `vendor/math/lean-repl` is missing. Math-Verify is a required pip dep; those tests must pass.
 
 MCP: tools stay **always registered**. Recall is a tool result. The conversation prefix is never rewritten.
 
