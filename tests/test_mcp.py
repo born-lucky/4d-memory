@@ -127,6 +127,38 @@ def test_live_zone_refuses_prefix_rewrite() -> None:
         assert_prefix_frozen(original, [original[0]])
 
 
+def test_content_length_initialize_roundtrip() -> None:
+    import os
+    import subprocess
+    import sys
+    from pathlib import Path
+
+    env = os.environ.copy()
+    env["PYTHONPATH"] = str(Path(__file__).resolve().parents[1] / "src")
+    env["PYTHONUNBUFFERED"] = "1"
+    init = {
+        "jsonrpc": "2.0",
+        "id": 1,
+        "method": "initialize",
+        "params": {
+            "protocolVersion": "2024-11-05",
+            "capabilities": {},
+            "clientInfo": {"name": "test", "version": "0"},
+        },
+    }
+    blob = json.dumps(init).encode()
+    framed = f"Content-Length: {len(blob)}\r\n\r\n".encode() + blob
+    proc = subprocess.run(
+        [sys.executable, "-u", "-m", "fourdmem.agent.mcp"],
+        input=framed,
+        capture_output=True,
+        timeout=10,
+        env=env,
+        cwd=str(Path(__file__).resolve().parents[1]),
+    )
+    assert b'"name":"fourdmem"' in proc.stdout or b'"name": "fourdmem"' in proc.stdout, proc.stderr
+
+
 def test_append_tool_result_keeps_prefix() -> None:
     original = [{"role": "user", "content": "prove it"}]
     out = append_tool_result(original, {"role": "tool", "content": "Hilbert oid"})

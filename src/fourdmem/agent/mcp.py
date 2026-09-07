@@ -42,6 +42,7 @@ def handle(store: Store, message: dict[str, Any]) -> dict[str, Any] | None:
     mid = message.get("id")
     method = message.get("method")
     params = message.get("params") or {}
+    client_proto = params.get("protocolVersion") if method == "initialize" else None
 
     if method is None:
         return _err(mid, -32600, "invalid request")
@@ -55,7 +56,7 @@ def handle(store: Store, message: dict[str, Any]) -> dict[str, Any] | None:
         return _ok(
             mid,
             {
-                "protocolVersion": PROTOCOL_VERSION,
+                "protocolVersion": client_proto or PROTOCOL_VERSION,
                 "serverInfo": {"name": SERVER_NAME, "version": __version__},
                 "capabilities": {
                     "tools": {"listChanged": False},
@@ -178,51 +179,75 @@ def _err(mid: Any, code: int, message: str) -> dict:
     return {"jsonrpc": "2.0", "id": mid, "error": {"code": code, "message": message}}
 
 
-def _read(stdin) -> dict | None:
-    """Content-Length framing, else one NDJSON line."""
-    if hasattr(stdin, "buffer"):
-        raw_in = stdin.buffer
-    else:
-        raw_in = stdin
+def _stdio_binary() -> None:
+    if sys.platform != "win32":
+        return
+    try:
+        import msvcrt
+
+        msvcrt.setmode(sys.stdin.fileno(), os.O_BINARY)
+        msvcrt.setmode(sys.stdout.fileno(), os.O_BINARY)
+    except (AttributeError, OSError, ValueError):
+        pass
+
+
+def _raw(stream):
+    return stream.buffer if hasattr(stream, "buffer") else stream
+
+
+def _read(stdin, framing: dict) -> dict | None:
+    """Content-Length framing, else one NDJSON line. Remember how the client speaks."""
+    raw_in = _raw(stdin)
     first = raw_in.readline()
     if not first:
         return None
-    if first.lower().startswith(b"content-length:"):
-        n = int(first.split(b":", 1)[1].strip())
+    header = first.decode("utf-8", errors="replace")
+    if header.lower().startswith("content-length:"):
+        framing["mode"] = "cl"
+        n = int(header.split(":", 1)[1].strip())
         while True:
             line = raw_in.readline()
             if line in (b"\r\n", b"\n", b""):
                 break
         body = raw_in.read(n)
         return json.loads(body.decode("utf-8"))
-    line = first.decode("utf-8").strip()
+    framing["mode"] = "ndjson"
+    line = header.strip()
     if not line:
-        return _read(stdin)
+        return _read(stdin, framing)
     return json.loads(line)
 
 
-def _write(msg: dict, stdout: TextIO) -> None:
-    blob = json.dumps(msg, ensure_ascii=False).encode("utf-8")
-    out = stdout.buffer if hasattr(stdout, "buffer") else stdout
-    header = f"Content-Length: {len(blob)}\r\n\r\n".encode("ascii")
-    out.write(header + blob)
+def _write(msg: dict, stdout: TextIO, framing: dict) -> None:
+    blob = json.dumps(msg, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
+    out = _raw(stdout)
+    if framing.get("mode") == "ndjson":
+        out.write(blob + b"\n")
+    else:
+        out.write(f"Content-Length: {len(blob)}\r\n\r\n".encode("ascii") + blob)
     out.flush()
 
 
 def serve(store: Store | None = None, stdin=None, stdout=None) -> None:
+    _stdio_binary()
     st = store or make_store()
     inn = stdin or sys.stdin
     out = stdout or sys.stdout
+    framing = {"mode": "cl"}
     while True:
         try:
-            msg = _read(inn)
-        except (json.JSONDecodeError, ValueError):
+            msg = _read(inn, framing)
+        except json.JSONDecodeError as exc:
+            _write(_err(None, -32700, f"parse error: {exc}"), out, framing)
+            continue
+        except ValueError as exc:
+            _write(_err(None, -32700, str(exc)), out, framing)
             continue
         if msg is None:
             break
         reply = handle(st, msg)
         if reply is not None:
-            _write(reply, out)
+            _write(reply, out, framing)
 
 
 def main(argv: list[str] | None = None) -> int:
